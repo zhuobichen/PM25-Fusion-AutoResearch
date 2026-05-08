@@ -479,14 +479,19 @@ exit_reason: "设计完成，方案指令已生成"
 - state=verified_pass/verified_fail/excluded → **跳过实现**（已验证或排除）
 - state=implemented → **跳过实现**（代码已存在）
 - state=designed → **需要实现**（有方案但未编码）
-- 注册表中不存在但有设计指令的方法 → **需要实现**
+
+**关键：检查设计指令目录中的新文件**
+扫描 {project_root}/SmartToCode/创新方法指令/ 和 复现方法指令/，对比注册表：
+- 有设计指令但注册表中不存在的方法 → **必须实现**
+- 这些是 Phase 3 刚设计的新方法，还没有代码
 
 如果注册表不存在，先运行: python -m shared.build_registry
 
 ## 你的任务
 
 1. 读取 {project_root}/SmartToCode/ 所有指令文件
-2. 实现代码到 {project_root}/CodeWorkSpace/
+2. **找出没有对应代码的设计指令**（对比 CodeWorkSpace/ 中的 .py 文件）
+3. 实现缺失的代码到 {project_root}/CodeWorkSpace/
 
 ## 输出目录结构
 
