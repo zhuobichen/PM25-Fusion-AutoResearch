@@ -1,0 +1,25 @@
+{
+  "default_profile": null,
+  "profiles": {
+    "full": {
+      "description": "完整流程（首次使用）",
+      "phases": [0, 1, 2, 3, 4, 5, 6]
+    },
+    "skip-download": {
+      "description": "已有文献，跳过下载",
+      "phases": [0, 2, 3, 4, 5, 6]
+    },
+    "design-verify": {
+      "description": "方案设计 + 验证循环",
+      "phases": [3, 4, 5]
+    },
+    "verify-only": {
+      "description": "只跑验证",
+      "phases": [5]
+    },
+    "code-iterate": {
+      "description": "编码 + 验证迭代",
+      "phases": [4, 5]
+    }
+  }
+}

@@ -6,10 +6,11 @@ BayesianVariationalFusion All Stages Validation
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
-
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
+from shared.paths import get_project_root, data_path
 import json
 import numpy as np
 import pandas as pd
@@ -21,10 +22,10 @@ from scipy.sparse.linalg import spsolve
 from scipy.spatial.distance import cdist
 from joblib import Parallel, delayed
 
-ROOT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-CMAQ_FILE = f'{ROOT_DIR}/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = f'{ROOT_DIR}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-FOLD_FILE = f'{ROOT_DIR}/test_data/fold_split_table.csv'
+ROOT_DIR = str(get_project_root())
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
 OUTPUT_FILE = f'{ROOT_DIR}/Innovation/failed/BayesianVariationalFusion_all_stages.json'
 
 # VNA baseline

@@ -14,6 +14,7 @@
 """
 
 import os
+from shared.paths import get_project_root, data_path
 import sys
 import json
 import numpy as np
@@ -23,7 +24,7 @@ from datetime import datetime
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 # 添加Code路径
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Code.VNAeVNAaVNA.nna_methods import NNA
 
 
@@ -113,7 +114,7 @@ class TestVerifier:
         # 加载数据
         monitor_file = os.path.join(self.test_data_dir, 'raw/Monitor/2020_DailyPM2.5Monitor.csv')
         cmaq_file = os.path.join(self.test_data_dir, 'raw/CMAQ/2020_PM25.nc')
-        fold_file = os.path.join(self.test_data_dir, 'fold_split_table.csv')
+        fold_file = os.path.join(self.test_data_dir, 'fold_split_table_daily.csv')
 
         monitor_df = pd.read_csv(monitor_file)
         fold_df = pd.read_csv(fold_file)
@@ -333,6 +334,6 @@ class TestVerifier:
 
 
 if __name__ == '__main__':
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     agent = TestVerifier(root_dir)
     result = agent.run(method_type='benchmark')

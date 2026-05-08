@@ -1,3 +1,4 @@
+import os
 # -*- coding: utf-8 -*-
 """
 GD-IDW - Gradient-Direction Inverse Distance Weighting
@@ -14,8 +15,8 @@ GD-IDW - Gradient-Direction Inverse Distance Weighting
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code/VNAeVNAaVNA')
 
 import numpy as np

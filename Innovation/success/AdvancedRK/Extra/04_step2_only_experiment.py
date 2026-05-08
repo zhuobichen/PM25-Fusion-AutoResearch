@@ -5,9 +5,10 @@
 - Step 2 Only（GPR Only）：跳过多项式，直接用GPR建模
 """
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from shared.paths import get_project_root, data_path
 import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
@@ -17,10 +18,10 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import Matern, WhiteKernel, ConstantKernel
 import netCDF4 as nc
 
-root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-cmaq_file = f'{root_dir}/test_data/raw/CMAQ/2020_PM25.nc'
-monitor_file = f'{root_dir}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-fold_file = f'{root_dir}/test_data/fold_split_table.csv'
+root_dir = str(get_project_root())
+cmaq_file = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+monitor_file = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+fold_file = data_path('test_data/fold_split_table_daily.csv')
 output_dir = f'{root_dir}/Innovation/success/AdvancedRK/Extra'
 os.makedirs(output_dir, exist_ok=True)
 

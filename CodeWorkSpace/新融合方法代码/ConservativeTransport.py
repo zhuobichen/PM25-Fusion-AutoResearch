@@ -18,9 +18,10 @@ Mass-Conservative Advection-Diffusion Mapping
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from shared.paths import get_project_root, data_path
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -28,11 +29,11 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from scipy.interpolate import RegularGridInterpolator
 from scipy.spatial import cKDTree
 
-root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-cmaq_file = f'{root_dir}/test_data/raw/CMAQ/2020_PM25.nc'
-monitor_file = f'{root_dir}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-met_file = f'{root_dir}/test_data/raw/Meteorology/2020_Meteorology.nc'
-fold_file = f'{root_dir}/test_data/fold_split_table.csv'
+root_dir = str(get_project_root())
+cmaq_file = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+monitor_file = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+met_file = data_path('test_data/raw/Meteorology/2020_Meteorology.nc')
+fold_file = data_path('test_data/fold_split_table_daily.csv')
 output_dir = f'{root_dir}/test_result/创新方法'
 os.makedirs(output_dir, exist_ok=True)
 
@@ -393,7 +394,7 @@ def cross_validate(method_func, fold_split_table, selected_days, **kwargs):
     method_func : callable
         融合方法函数
     fold_split_table : str
-        路径 to fold_split_table.csv
+        路径 to fold_split_table_daily.csv
     selected_days : list
         测试日期列表
 

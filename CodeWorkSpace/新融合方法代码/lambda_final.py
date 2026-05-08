@@ -1,8 +1,9 @@
+import os
 # -*- coding: utf-8 -*-
 """Quick lambda analysis - 3 days, 7 lambdas per stage"""
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/新融合方法代码')
 import numpy as np
 import pandas as pd
@@ -11,9 +12,9 @@ from datetime import datetime, timedelta
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from CodeWorkSpace.新融合方法代码.gVNA import gVNA
 
-CMAQ_FILE = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-FOLD_FILE = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_data/fold_split_table_daily.csv'
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
 LAMBDA_VALUES = [3, 5, 8, 10, 12, 15, 20]
 
 def compute_metrics(y_true, y_pred):

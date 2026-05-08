@@ -8,9 +8,10 @@ PM2.5 CMAQ融合方法基准测试适配代码
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+
 
 import os
+from shared.paths import get_project_root, data_path
 import numpy as np
 import pandas as pd
 import netCDF4 as nc
@@ -25,8 +26,8 @@ class DataLoader:
 
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.cmaq_dir = os.path.join(root_dir, 'test_data/raw/CMAQ')
-        self.monitor_dir = os.path.join(root_dir, 'test_data/raw/Monitor')
+        self.cmaq_dir = data_path('test_data/raw/CMAQ')
+        self.monitor_dir = data_path('test_data/raw/Monitor')
         self.test_data_dir = os.path.join(root_dir, 'test_data')
 
     def load_monitor_data(self, selected_day=None):
@@ -307,7 +308,7 @@ def run_benchmark(root_dir, output_dir, selected_day='2020-01-01'):
     y_grid_model = pred_pm25.ravel()
 
     # 加载十折划分
-    fold_df = pd.read_csv(os.path.join(root_dir, 'test_data/fold_split_table.csv'))
+    fold_df = pd.read_csv(data_path('test_data/fold_split_table_daily.csv'))
 
     # 初始化基准测试
     fb = FusionBenchmark(dl)
@@ -357,7 +358,7 @@ def run_benchmark(root_dir, output_dir, selected_day='2020-01-01'):
 
 
 if __name__ == '__main__':
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     output_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_result/基准方法'
 
     results = run_benchmark(root_dir, output_dir, selected_day='2020-01-01')

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from shared.paths import get_project_root, data_path
 """
 Agent Spawn 工作流编排器 (v9)
 ===========================
@@ -623,7 +625,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         project_root = sys.argv[1]
     else:
-        project_root = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+        project_root = 'str(get_project_root())'
 
     print(f"初始化项目: {project_root}")
 

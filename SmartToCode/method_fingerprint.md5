@@ -1,6 +1,7 @@
 # 方法指纹库 (method_fingerprint.md5)
 # 格式: md5_hash | method_name | date
 # 生成时间: 2026-04-09
+# 最后更新: 2026-05-07
 
 # === 已有方法指纹 ===
 
@@ -31,6 +32,14 @@ avna_bias_method_v1 | V1_aVNA | 20260410
 vg_vna_variogram_geometric_v1 | Innovation_VG_VNA | 20260410
 cr_abc_concentration_regime_v1 | Innovation_CR_ABC | 20260410
 sloocv_ak_spatial_adaptive_kriging_v1 | Innovation_SLOOCV_AK | 20260410
+
+# === 2026-05-07 新增复现方法指纹 ===
+rf_kriging_residual_random_forest_v1 | RF-Kriging | 20260507
+mle_optimal_interpolation_bayesian_v1 | MLE-OI | 20260507
+
+# === 2026-05-07 新增创新方法指纹 ===
+copula_non_gaussian_spatial_fusion_gamma_gaussian_v1 | CopulaSpatialFusion | 20260507
+wavelet_multiscale_gpr_residual_db4_3level_v1 | WaveletGPR | 20260507
 
 # === 排除方法记录 ===
 # msef_method_fingerprint_v1 | MSEF | 20260405 | 排除原因: 加权集成，使用交叉验证学习权重

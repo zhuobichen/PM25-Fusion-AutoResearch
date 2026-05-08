@@ -1,8 +1,10 @@
+import os
+from shared.paths import get_project_root, data_path
 """
 核函数/方法敏感性实验：比较不同核函数和其他ML方法
 """
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pandas as pd
@@ -16,10 +18,10 @@ from sklearn.neighbors import KNeighborsRegressor
 import netCDF4 as nc
 from datetime import datetime
 
-root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-cmaq_file = f'{root_dir}/test_data/raw/CMAQ/2020_PM25.nc'
-monitor_file = f'{root_dir}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-fold_file = f'{root_dir}/test_data/fold_split_table.csv'
+root_dir = str(get_project_root())
+cmaq_file = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+monitor_file = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+fold_file = data_path('test_data/fold_split_table_daily.csv')
 
 
 def compute_metrics(y_true, y_pred):

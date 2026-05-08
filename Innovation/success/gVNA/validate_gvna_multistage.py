@@ -4,11 +4,12 @@ gVNA 十折交叉验证 (简化版)
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/新融合方法代码')
 
-import os
+from shared.paths import get_project_root, data_path
 import json
 import numpy as np
 import pandas as pd
@@ -18,10 +19,10 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 from CodeWorkSpace.新融合方法代码.gVNA import gVNA
 
-ROOT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-CMAQ_FILE = ROOT_DIR + '/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = ROOT_DIR + '/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-FOLD_FILE = ROOT_DIR + '/test_data/fold_split_table_daily.csv'
+ROOT_DIR = str(get_project_root())
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
 OUTPUT_DIR = ROOT_DIR + '/Innovation/success/gVNA'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

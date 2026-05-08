@@ -21,10 +21,10 @@ python gVNA_full_domain.py --stage Jan             # 全月（Jan/Jul/Dec）
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
-
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 import argparse
 import numpy as np
 import pandas as pd
@@ -35,8 +35,8 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from gVNA import gVNA
 
 # ============ 数据路径 ============
-CMAQ_FILE = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
 OUTPUT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_result/gVNA_full_domain'
 
 

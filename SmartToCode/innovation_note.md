@@ -1,5 +1,6 @@
 # 创新方法笔记 (innovation_note.md)
 生成时间: 2026-04-09
+最后更新: 2026-05-07
 
 ## 创新思路
 
@@ -38,7 +39,7 @@
 - 十折CV-RMSE对比ResidualKriging（固定参数）和GenFriberg
 - 分稳定度类别统计校正误差
 
-### 创新3：ConservativeTransport（质量守恒传输映射）【新增】
+### 创新3：ConservativeTransport（质量守恒传输映射）
 **核心思路**：半拉格朗日平流传输CMAQ场保持总质量，扩散修正项用固定权重插值。无神经网络，无权重学习。
 
 **创新依据**：
@@ -53,6 +54,45 @@
 **验证计划**：
 - 十折CV-RMSE对比ResidualKriging
 - 质量守恒检验：融合场与CMAQ总质量偏差 < 0.1%
+
+### 创新4：CopulaSpatialFusion（Copula非高斯空间融合）【2026-05-07新增】
+**核心思路**：使用Copula函数建模CMAQ与监测值的联合分布，显式处理PM2.5数据的非高斯特性（右偏、重尾）。将边际分布与依赖结构解耦，允许使用Gamma边际分布，同时通过Gaussian Copula捕获非线性依赖。
+
+**创新依据**：
+- PM2.5浓度呈对数正态/Gamma分布，非高斯
+- 现有克里金/GPR方法均假设高斯残差，高浓度区建模不准确
+- Copula将边际分布与依赖结构分离，理论框架更灵活
+- 条件期望提供天然的不确定性量化
+
+**风险假设**：
+- Gamma分布拟合质量依赖样本量
+- Gaussian Copula无法捕获尾部依赖（极端污染事件）
+- 若CMAQ-监测近似线性关系，Copula退化为普通回归
+
+**验证计划**：
+- 十折CV对比PolyRK、AdvancedRK
+- 分浓度区间统计：低/中/高浓度分别评估
+- 检验Gamma分布拟合优度（KS检验p值）
+
+### 创新5：WaveletGPR（小波多尺度GPR残差融合）【2026-05-07新增】
+**核心思路**：使用离散小波变换将CMAQ残差分解为多个空间尺度，对每个尺度独立GPR建模后重构。大尺度捕获区域传输偏差，小尺度捕获局地效应。
+
+**创新依据**：
+- 大气过程具有多尺度特性（天气尺度~100km、城市尺度~20km、局地尺度~5km）
+- 现有GPR使用单一尺度核函数，无法同时捕获多尺度结构
+- 小波分解天然正交，避免尺度间干扰
+- 各尺度独立优化GPR超参数，更灵活
+
+**风险假设**：
+- IDW网格化可能丢失局地细节
+- 小波边界效应可能产生伪影
+- 细节尺度GPR可能过拟合噪声
+- 计算量较大（需对每个尺度独立训练GPR）
+
+**验证计划**：
+- 十折CV对比PolyRK、AdvancedRK
+- 尺度贡献分析：各尺度对总残差的方差贡献比
+- 敏感性测试：分解层数J=2,3,4的影响
 
 ## 排除方法分析
 
@@ -76,15 +116,27 @@
 **适配**：CMAQ作为预报，监测作为真值
 **指纹**：ddnet_v1_prednet_danet_dual_system
 
-### V1_BayesianSTK（贝叶斯时空克里金）【新增复现】
+### V1_BayesianSTK（贝叶斯时空克里金）【已完成】
 **核心**：时空随机场 + MCMC推断 + 后验预测
 **适配**：CMAQ作为协变量，监测作为观测
 **指纹**：bayesian_stk_spatiotemporal_kriging_mcmc
 
-### V1_NeuroDDAF（神经动态扩散平流场）【新增复现】
+### V1_NeuroDDAF（神经动态扩散平流场）【已完成】
 **核心**：平流-扩散PDE + GRU-GAT + 谱域求解 + 证据融合
 **适配**：CMAQ作为物理初始猜，神经网络修正偏差
 **指纹**：neuroddaf_v1_physics_informed_diffusion_advection
+
+### RF-Kriging（随机森林-克里金残差校正）【2026-05-07新增】
+**核心**：随机森林学习CMAQ→监测非线性映射 + 克里金插值校正残差空间结构
+**适配**：CMAQ+坐标作为RF特征，监测作为目标
+**指纹**：rf_kriging_residual_random_forest_v1
+**特点**：两步法，RF处理非线性偏差，克里金处理空间残差
+
+### MLE-OI（最大似然最优插值）【2026-05-07新增】
+**核心**：贝叶斯最优插值框架，CMAQ为背景场，监测为观测，MLE估计误差协方差参数
+**适配**：CMAQ作为背景场（先验），监测作为观测更新
+**指纹**：mle_optimal_interpolation_bayesian_v1
+**特点**：经典数据同化方法，权重由误差协方差比值物理决定
 
 ## 指纹重复检查
 
@@ -95,21 +147,25 @@
 | ddnet_v1_prednet_danet_dual_system | 唯一 |
 | physicicnn_pde_hard_constraint_v1 | 唯一 |
 | polygpr_adapt_atmospheric_stability_v1 | 唯一 |
-| bayesian_stk_spatiotemporal_kriging_mcmc | 唯一（新增） |
-| neuroddaf_v1_physics_informed_diffusion_advection | 唯一（新增） |
-| conservative_transport_mass_balance_v1 | 唯一（新增） |
+| bayesian_stk_spatiotemporal_kriging_mcmc | 唯一 |
+| neuroddaf_v1_physics_informed_diffusion_advection | 唯一 |
+| conservative_transport_mass_balance_v1 | 唯一 |
+| rf_kriging_residual_random_forest_v1 | 唯一（新增） |
+| mle_optimal_interpolation_bayesian_v1 | 唯一（新增） |
+| copula_non_gaussian_spatial_fusion_gamma_gaussian_v1 | 唯一（新增） |
+| wavelet_multiscale_gpr_residual_db4_3level_v1 | 唯一（新增） |
 
 ## 指纹库统计
 
 | 类别 | 数量 |
 |-----|------|
-| 复现方法指纹 | 3个（V1_DDNet, V1_BayesianSTK, V1_NeuroDDAF） |
-| 创新方法指纹 | 5个（PDEICNN, PolyGPRAdapt, HybridEAVNA, ResidualKriging, ConservativeTransport） |
+| 复现方法指纹 | 5个（V1_DDNet, V1_BayesianSTK, V1_NeuroDDAF, RF-Kriging, MLE-OI） |
+| 创新方法指纹 | 7个（PDEICNN, PolyGPRAdapt, HybridEAVNA, ResidualKriging, ConservativeTransport, CopulaSpatialFusion, WaveletGPR） |
 | 排除方法记录 | 2个（MSEF, Stacking） |
-| **总计** | **8个有效指纹** |
+| **总计** | **12个有效指纹** |
 
-## 本轮新增
+## 本轮新增（2026-05-07）
 
-- 复现方法：2个（V1_BayesianSTK, V1_NeuroDDAF）
-- 创新方法：1个（ConservativeTransport）
-- 新增指纹：3个
+- 复现方法：2个（RF-Kriging, MLE-OI）
+- 创新方法：2个（CopulaSpatialFusion, WaveletGPR）
+- 新增指纹：4个

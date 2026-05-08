@@ -10,6 +10,7 @@
 """
 
 import os
+from shared.paths import get_project_root, data_path
 import hashlib
 from datetime import datetime
 
@@ -181,6 +182,6 @@ MD5: {md5_hash}
 
 
 if __name__ == '__main__':
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     agent = LiteratureAnalyzer(root_dir)
     result = agent.run()

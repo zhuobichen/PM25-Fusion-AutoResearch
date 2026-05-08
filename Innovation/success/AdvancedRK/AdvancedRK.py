@@ -1,3 +1,5 @@
+import os
+from shared.paths import get_project_root, data_path
 # -*- coding: utf-8 -*-
 """
 AdvancedRK - Advanced Residual Kriging with Matern Kernel
@@ -22,7 +24,7 @@ AdvancedRK: 基于Matern核的高斯过程回归残差克里金方法
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pandas as pd
@@ -265,9 +267,9 @@ if __name__ == '__main__':
     import netCDF4 as nc
     from datetime import datetime
 
-    ROOT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-    CMAQ_FILE = f'{ROOT_DIR}/test_data/raw/CMAQ/2020_PM25.nc'
-    MONITOR_FILE = f'{ROOT_DIR}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
+    ROOT_DIR = str(get_project_root())
+    CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+    MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
 
     # 加载数据
     monitor_df = pd.read_csv(MONITOR_FILE)

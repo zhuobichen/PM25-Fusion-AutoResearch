@@ -10,6 +10,7 @@
 """
 
 import os
+from shared.paths import get_project_root, data_path
 import json
 from datetime import datetime
 
@@ -164,6 +165,6 @@ class LiteratureDownloader:
 
 
 if __name__ == '__main__':
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     agent = LiteratureDownloader(root_dir)
     result = agent.run()

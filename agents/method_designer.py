@@ -11,6 +11,7 @@
 """
 
 import os
+from shared.paths import get_project_root, data_path
 import hashlib
 import json
 from datetime import datetime
@@ -276,6 +277,6 @@ MD5: {fingerprint}
 
 
 if __name__ == '__main__':
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     agent = MethodDesigner(root_dir)
     result = agent.run()

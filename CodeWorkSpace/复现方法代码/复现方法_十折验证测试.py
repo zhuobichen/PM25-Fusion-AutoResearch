@@ -25,6 +25,7 @@ import sys
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/复现方法代码')
 
 import os
+from shared.paths import get_project_root, data_path
 import numpy as np
 import pandas as pd
 import netCDF4 as nc
@@ -47,8 +48,8 @@ class DataLoader:
 
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.cmaq_dir = os.path.join(root_dir, 'test_data/raw/CMAQ')
-        self.monitor_dir = os.path.join(root_dir, 'test_data/raw/Monitor')
+        self.cmaq_dir = data_path('test_data/raw/CMAQ')
+        self.monitor_dir = data_path('test_data/raw/Monitor')
 
     def load_monitor_data(self, selected_day=None):
         """加载监测数据"""
@@ -233,7 +234,7 @@ class ReproductionValidator:
         print(f"Grid points: {len(X_grid)}")
 
         # 加载十折划分
-        fold_df = pd.read_csv(os.path.join(root_dir, 'test_data/fold_split_table.csv'))
+        fold_df = pd.read_csv(data_path('test_data/fold_split_table_daily.csv'))
 
         # 定义方法
         methods = {
@@ -313,7 +314,7 @@ class ReproductionValidator:
 
 
 def main():
-    root_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+    root_dir = str(get_project_root())
     output_dir = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/test_result/复现方法'
 
     dl = DataLoader(root_dir)

@@ -1,11 +1,13 @@
+import os
+from shared.paths import get_project_root, data_path
 # -*- coding: utf-8 -*-
 """
 gVNA Auto std vs Fixed 15.0 多天对比测试
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/新融合方法代码')
 
 import numpy as np
@@ -15,10 +17,10 @@ from datetime import datetime, timedelta
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from CodeWorkSpace.新融合方法代码.gVNA import gVNA
 
-ROOT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-CMAQ_FILE = ROOT_DIR + '/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = ROOT_DIR + '/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-FOLD_FILE = ROOT_DIR + '/test_data/fold_split_table_daily.csv'
+ROOT_DIR = str(get_project_root())
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
 
 
 def compute_metrics(y_true, y_pred):

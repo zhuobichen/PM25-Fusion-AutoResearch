@@ -1,3 +1,5 @@
+import os
+from shared.paths import get_project_root, data_path
 # -*- coding: utf-8 -*-
 """
 RK_OLS_Poly 三种训练方式对比测试（多日）
@@ -9,8 +11,8 @@ RK_OLS_Poly 三种训练方式对比测试（多日）
 """
 
 import sys
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch')
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 
 import numpy as np
 import pandas as pd
@@ -22,10 +24,10 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 
-ROOT_DIR = 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
-CMAQ_FILE = f'{ROOT_DIR}/test_data/raw/CMAQ/2020_PM25.nc'
-MONITOR_FILE = f'{ROOT_DIR}/test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv'
-FOLD_FILE = f'{ROOT_DIR}/test_data/fold_split_table.csv'
+ROOT_DIR = str(get_project_root())
+CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
+MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
+FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
 
 SELECTED_DAYS = ['2020-01-01', '2020-01-02', '2020-01-03', '2020-01-04']
 

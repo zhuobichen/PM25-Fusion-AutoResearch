@@ -519,7 +519,7 @@ def cross_validate(method_func, fold_split_table, selected_days):
     Parameters:
     -----------
     fold_split_table : str
-        路径 to fold_split_table.csv
+        路径 to fold_split_table_daily.csv
     selected_days : list
         测试日期列表
 
@@ -607,7 +607,7 @@ exit_reason: "实现完成，代码已生成"
 ## 十折验证流程
 
 ```
-1. 读取 {project_root}/test_data/fold_split_table.csv 获取站点划分
+1. 读取 {project_root}/test_data/fold_split_table_daily.csv 获取站点划分
 2. 读取 {project_root}/test_data/selected_days.txt 获取测试日期
 3. 对每折（fold 1-10）：
    a. 训练集站点 + CMAQ数据 → 拟合融合模型

@@ -124,3 +124,25 @@ $$
 - 多源空气质量数据融合
 - 不确定性量化与超标概率预测
 - 流行病学暴露评估
+
+### 数据规格
+
+#### 输入
+| 数据 | 格式 | 维度 | 单位 |
+|-----|------|-----|------|
+| 地面监测PM2.5 | array | (n_stations, n_times) | μg/m³ |
+| 卫星AOD | array | (n_grids, n_times) | - |
+| PCM模型输出 | array | (1km, 1km) | μg/m³ |
+| AQR再分析 | array | (0.1°, 0.1°) | μg/m³ |
+| NDVI | array | (n_grids,) | - |
+
+#### 输出
+| 数据 | 格式 | 单位 |
+|-----|------|------|
+| PM2.5预测分布 | array | μg/m³ |
+
+## 方法指纹
+MD5: bayesian_multisource_fusion_model_bsmfm
+
+## 随机性
+- [x] 是（贝叶斯推断带随机采样）
