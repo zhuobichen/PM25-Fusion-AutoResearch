@@ -555,7 +555,10 @@ def run_verify_phase():
 
     # 1. 先跑基准验证
     baseline_script = data_path('test_result/基准方法/validate_baseline_multistage.py')
-    if os.path.exists(baseline_script):
+    baseline_results = data_path('test_result/基准方法/benchmark_multistage.json')
+    if os.path.exists(baseline_results):
+        print(f"\n[1/2] 基准验证已有结果，跳过: {os.path.basename(baseline_results)}")
+    elif os.path.exists(baseline_script):
         print(f"\n[1/2] 运行基准验证: {os.path.basename(baseline_script)}")
         result = subprocess.run(
             [sys.executable, baseline_script],
@@ -584,23 +587,28 @@ def run_verify_phase():
 
     # 2.1 读取注册表，跳过已验证方法
     skip_methods = set()
+    skip_methods_normalized = {}  # normalized_name → original_name
     try:
         from shared.method_registry import MethodRegistry
         registry = MethodRegistry()
         skip_methods = registry.get_tested_method_names()
+        for m in skip_methods:
+            skip_methods_normalized[m.replace('-', '_')] = m
         if skip_methods:
             print(f"\n  注册表中已有 {len(skip_methods)} 个已验证方法，将跳过: {', '.join(sorted(skip_methods))}")
     except Exception:
         pass  # 注册表不存在时正常执行
 
-    # 2.2 过滤脚本
+    # 2.2 过滤脚本（归一化连字符/下划线以匹配注册表）
     scripts_to_run = []
     for script in scripts:
         basename = os.path.basename(script)
         # 从文件名提取方法名：PolyRK_十折标准模式.py → PolyRK
         method_name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
-        if method_name in skip_methods:
-            print(f"  [跳过] {basename} — 方法 {method_name} 已有验证结果")
+        method_name_normalized = method_name.replace('-', '_')
+        if method_name_normalized in skip_methods_normalized:
+            original = skip_methods_normalized[method_name_normalized]
+            print(f"  [跳过] {basename} — 方法 {original} 已有验证结果")
         else:
             scripts_to_run.append(script)
 
