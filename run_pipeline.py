@@ -582,22 +582,109 @@ def run_verify_phase():
         print("  请先完成 Phase 4 (代码实现)")
         return False
 
-    print(f"\n[2/2] 运行 {len(scripts)} 个创新方法验证脚本:")
-    for i, script in enumerate(scripts):
-        print(f"  [{i + 1}/{len(scripts)}] {os.path.basename(script)}")
+    # 2.1 读取注册表，跳过已验证方法
+    skip_methods = set()
+    try:
+        from shared.method_registry import MethodRegistry
+        registry = MethodRegistry()
+        skip_methods = registry.get_tested_method_names()
+        if skip_methods:
+            print(f"\n  注册表中已有 {len(skip_methods)} 个已验证方法，将跳过: {', '.join(sorted(skip_methods))}")
+    except Exception:
+        pass  # 注册表不存在时正常执行
+
+    # 2.2 过滤脚本
+    scripts_to_run = []
+    for script in scripts:
+        basename = os.path.basename(script)
+        # 从文件名提取方法名：PolyRK_十折标准模式.py → PolyRK
+        method_name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
+        if method_name in skip_methods:
+            print(f"  [跳过] {basename} — 方法 {method_name} 已有验证结果")
+        else:
+            scripts_to_run.append(script)
+
+    if not scripts_to_run:
+        print(f"\n  所有 {len(scripts)} 个创新方法均已验证，无需重复运行")
+        PipelineState.phase_completed('verify')
+        print(f"\n[完成] Phase 5 (verify) — 全部方法已验证")
+        return True
+
+    print(f"\n[2/2] 运行 {len(scripts_to_run)} 个创新方法验证脚本 (跳过 {len(scripts) - len(scripts_to_run)} 个):")
+    for i, script in enumerate(scripts_to_run):
+        basename = os.path.basename(script)
+        method_name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
+        print(f"  [{i + 1}/{len(scripts_to_run)}] {basename}")
         result = subprocess.run(
             [sys.executable, script],
             cwd=PROJECT_ROOT, env=env,
             text=True, encoding='utf-8', errors='replace'
         )
         if result.returncode != 0:
-            print(f"  [失败] {os.path.basename(script)} 退出码: {result.returncode}")
+            print(f"  [失败] {basename} 退出码: {result.returncode}")
             return False
-        print(f"  [完成] {os.path.basename(script)}")
+        print(f"  [完成] {basename}")
+
+        # 验证后更新注册表
+        try:
+            _update_registry_after_verify(method_name, registry)
+        except Exception as e:
+            print(f"  [警告] 注册表更新失败: {e}")
 
     PipelineState.phase_completed('verify')
     print(f"\n[完成] Phase 5 (verify) 全部验证通过")
     return True
+
+
+def _update_registry_after_verify(method_name: str, registry=None):
+    """验证完成后更新注册表：从结果 JSON 中解析指标并写入。"""
+    if registry is None:
+        try:
+            from shared.method_registry import MethodRegistry
+            registry = MethodRegistry()
+        except Exception:
+            return
+
+    # 查找结果 JSON
+    import glob as _glob
+    patterns = [
+        os.path.join(PROJECT_ROOT, 'Innovation', 'success', method_name, f'{method_name}_all_stages.json'),
+        os.path.join(PROJECT_ROOT, 'Innovation', 'failed', method_name, f'{method_name}_all_stages.json'),
+        os.path.join(PROJECT_ROOT, 'Innovation', '*', method_name, '*_all_stages.json'),
+    ]
+    for pattern in patterns:
+        matches = _glob.glob(pattern)
+        if matches:
+            json_path = matches[0]
+            registry.update_from_all_stages_json(method_name, json_path)
+            registry.save()
+            print(f"  [注册表] 已更新 {method_name}")
+            return
+
+    # 没有 all_stages JSON，尝试从 summary CSV 更新
+    csv_path = os.path.join(PROJECT_ROOT, 'test_result', '创新方法', f'{method_name}_summary.csv')
+    if os.path.exists(csv_path):
+        import csv as _csv
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                name = (row.get('Method') or row.get('method') or '').strip()
+                if name == method_name:
+                    metrics = {}
+                    for key in ('R2', 'MAE', 'RMSE', 'MB'):
+                        try:
+                            metrics[key] = float(row.get(key, 0))
+                        except (ValueError, TypeError):
+                            metrics[key] = 0.0
+                    if not registry.method_exists(method_name):
+                        registry.add_method(method_name)
+                    r2 = metrics.get('R2', 0) or 0
+                    from shared.method_registry import STATE_VERIFIED_PASS, STATE_VERIFIED_FAIL
+                    registry.update_state(method_name, STATE_VERIFIED_PASS if r2 > 0.8 else STATE_VERIFIED_FAIL)
+                    registry.update_metrics(method_name, metrics)
+                    registry.save()
+                    print(f"  [注册表] 已从 CSV 更新 {method_name}")
+                    return
 
 
 def run_phase(phase_num, executor=None):
@@ -775,6 +862,12 @@ def main():
     parser.add_argument('--profile-desc', type=str, default='',
                         help='配合 --save-profile 使用，设置描述')
 
+    # 注册表管理
+    parser.add_argument('--registry-status', action='store_true',
+                        help='查看方法注册表摘要')
+    parser.add_argument('--registry-sync', action='store_true',
+                        help='重建方法注册表（扫描 Innovation/test_result/CodeWorkSpace/SmartToCode）')
+
     args = parser.parse_args()
 
     # --- 特殊命令（不执行 phase）---
@@ -791,6 +884,27 @@ def main():
 
     if args.list_profiles:
         PipelineConfig.list_profiles()
+        return
+
+    # --- 注册表管理 ---
+    if args.registry_status:
+        try:
+            from shared.method_registry import MethodRegistry
+            registry = MethodRegistry()
+            registry.print_summary()
+        except FileNotFoundError:
+            print("注册表不存在。运行 --registry-sync 构建。")
+        except Exception as e:
+            print(f"读取注册表失败: {e}")
+        return
+
+    if args.registry_sync:
+        try:
+            from shared.build_registry import build_registry
+            build_registry(merge=False, dry_run=False)
+        except Exception as e:
+            print(f"构建注册表失败: {e}")
+            sys.exit(1)
         return
 
     # --- --save-profile ---

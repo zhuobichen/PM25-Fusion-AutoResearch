@@ -1,0 +1,1738 @@
+{
+  "_meta": {
+    "version": "1.0.0",
+    "created_at": "2026-05-08T15:36:02.470449",
+    "last_updated": "2026-05-08T15:36:02.502081"
+  },
+  "methods": {
+    "AdvancedRK": {
+      "name": "AdvancedRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.471938",
+        "verified_at": "2026-05-08T15:36:02.471971"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9143419433119433,
+        "MAE": 8.871117007308879,
+        "RMSE": 15.514782826021635,
+        "MB": -0.141268753697063
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9014902225874388,
+          "MAE": 10.069463673319321,
+          "RMSE": 15.84113077212144,
+          "MB": -0.04958430793880357,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9143419433119433,
+          "MAE": 8.871117007308879,
+          "RMSE": 15.514782826021635,
+          "MB": -0.141268753697063,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8501162725684441,
+          "MAE": 3.3164789559432326,
+          "RMSE": 4.900584895072948,
+          "MB": -0.03816279245995122,
+          "innovation_verified": true
+        },
+        "stage3": {
+          "R2": 0.9104131636204688,
+          "MAE": 7.084768240627038,
+          "RMSE": 11.729124602789605,
+          "MB": 0.011474855420239195,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 4,
+      "source_files": {
+        "result_json": "Innovation/success/AdvancedRK/AdvancedRK_all_stages.json"
+      }
+    },
+    "CGARK": {
+      "name": "CGARK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.472410",
+        "verified_at": "2026-05-08T15:36:02.472434"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.8052329909612781,
+        "MAE": 14.29584239935769,
+        "RMSE": 23.39479745598481,
+        "MB": 0.3907939854826105
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.80234410239711,
+          "MAE": 15.303980350269226,
+          "RMSE": 22.438891516261926,
+          "MB": 0.47654244279603447,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.8052329909612781,
+          "MAE": 14.29584239935769,
+          "RMSE": 23.39479745598481,
+          "MB": 0.3907939854826105,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.7230222872994452,
+          "MAE": 4.459598779374983,
+          "RMSE": 6.661822957889877,
+          "MB": -0.03056089077959801,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.7873851438028684,
+          "MAE": 11.158892429245451,
+          "RMSE": 18.069257347602854,
+          "MB": 0.6052519946839959,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/success/CGARK/CGARK_all_stages.json",
+        "summary_csv": "test_result/创新方法/CGARK_summary.csv"
+      }
+    },
+    "CSPRK": {
+      "name": "CSPRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.473034",
+        "verified_at": "2026-05-08T15:36:02.473057"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9145548375211436,
+        "MAE": 6.970167400330138,
+        "RMSE": 11.454792849600155,
+        "MB": 0.09396570279342006
+      },
+      "best_stage": "stage3",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9115381213875313,
+          "MAE": 9.660418991233046,
+          "RMSE": 15.011517237891972,
+          "MB": -0.05441373513019553,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9144830467638732,
+          "MAE": 8.920683541255418,
+          "RMSE": 15.501998904713906,
+          "MB": -0.1513159284225317,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8526205709721917,
+          "MAE": 3.3052257908544314,
+          "RMSE": 4.859472283610065,
+          "MB": -0.013312324727633018,
+          "innovation_verified": true
+        },
+        "stage3": {
+          "R2": 0.9145548375211436,
+          "MAE": 6.970167400330138,
+          "RMSE": 11.454792849600155,
+          "MB": 0.09396570279342006,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 4,
+      "source_files": {
+        "result_json": "Innovation/success/CSPRK/CSPRK_all_stages.json"
+      }
+    },
+    "GARK": {
+      "name": "GARK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.473437",
+        "verified_at": "2026-05-08T15:36:02.473459"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.7955080599363935,
+        "MAE": 14.978858401658407,
+        "RMSE": 23.971747231951277,
+        "MB": -0.09472807497659773
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.7777557228886516,
+          "MAE": 16.5019578532036,
+          "RMSE": 23.793690249161163,
+          "MB": -0.3219826932562371,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.7955080599363935,
+          "MAE": 14.978858401658407,
+          "RMSE": 23.971747231951277,
+          "MB": -0.09472807497659773,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.5947372671412832,
+          "MAE": 5.4501133457650015,
+          "RMSE": 8.058217939452401,
+          "MB": -0.44469559270076336,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.7676737991486473,
+          "MAE": 12.101081955054227,
+          "RMSE": 18.88828795778328,
+          "MB": -0.16502983141995847,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/success/GARK/GARK_all_stages.json",
+        "summary_csv": "test_result/创新方法/GARK_summary.csv"
+      }
+    },
+    "GDIDW": {
+      "name": "GDIDW",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.474168",
+        "verified_at": "2026-05-08T15:36:02.474191"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9147925605848413,
+        "MAE": 8.812567728583051,
+        "RMSE": 15.473920073183393,
+        "MB": -0.04387482203448336
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9056763330325078,
+          "MAE": 10.028901796616495,
+          "RMSE": 15.500897640104993,
+          "MB": -0.07445151907437075,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.9147925605848413,
+          "MAE": 8.812567728583051,
+          "RMSE": 15.473920073183393,
+          "MB": -0.04387482203448336,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.8081042015149392,
+          "MAE": 3.6704227700637055,
+          "RMSE": 5.545023711826527,
+          "MB": -0.20686503957858457,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.9030101373501742,
+          "MAE": 7.250828726114597,
+          "RMSE": 12.204125693989868,
+          "MB": -0.13203305763584383,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/success/GDIDW/GDIDW_beta0.0_all_stages.json"
+      }
+    },
+    "MSAGARK": {
+      "name": "MSAGARK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.475007",
+        "verified_at": "2026-05-08T15:36:02.475029"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.7560263466510072,
+        "MAE": 17.335946352706472,
+        "RMSE": 26.183823018314147,
+        "MB": 0.8241637905752471
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.7503825060819771,
+          "MAE": 17.858038230886176,
+          "RMSE": 25.216454271742077,
+          "MB": 0.842843015252659,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.7560263466510072,
+          "MAE": 17.335946352706472,
+          "RMSE": 26.183823018314147,
+          "MB": 0.8241637905752471,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.6383165777427317,
+          "MAE": 5.0441287453900845,
+          "RMSE": 7.612634455432883,
+          "MB": -0.10108458751466676,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.7525742653187364,
+          "MAE": 12.789083309425735,
+          "RMSE": 19.492427788490534,
+          "MB": 0.8147741810387084,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/success/MSAGARK/MSAGARK_all_stages.json"
+      }
+    },
+    "MSRK": {
+      "name": "MSRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.475974",
+        "verified_at": "2026-05-08T15:36:02.475998"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9156888638950298,
+        "MAE": 8.822276502673922,
+        "RMSE": 15.3923192640588,
+        "MB": -0.1006105818589762
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9116481734681282,
+          "MAE": 9.69502247031287,
+          "RMSE": 15.00217670124746,
+          "MB": 0.011307496787503755,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9156888638950298,
+          "MAE": 8.822276502673922,
+          "RMSE": 15.3923192640588,
+          "MB": -0.1006105818589762,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8562313240993134,
+          "MAE": 3.272412809811127,
+          "RMSE": 4.799575315588475,
+          "MB": -0.01107489839359291,
+          "innovation_verified": true
+        },
+        "stage3": {
+          "R2": 0.9151542686795103,
+          "MAE": 6.927435268599513,
+          "RMSE": 11.414542210926612,
+          "MB": 0.13117282888153628,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 4,
+      "source_files": {
+        "result_json": "Innovation/success/MSRK/MSRK_all_stages.json",
+        "summary_csv": "test_result/创新方法/MSRK_summary.csv"
+      }
+    },
+    "PG-STGAT": {
+      "name": "PG-STGAT",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.476395",
+        "verified_at": "2026-05-08T15:36:02.482649"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.8560152135487303,
+        "MAE": 12.204285879956862,
+        "RMSE": 20.114993444585235,
+        "MB": -0.2037917995044581
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8401751968963038,
+          "MAE": 13.532140963025052,
+          "RMSE": 20.177557767063302,
+          "MB": -0.36099912106849597,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.8560152135487303,
+          "MAE": 12.204285879956862,
+          "RMSE": 20.114993444585235,
+          "MB": -0.2037917995044581,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.7053728346818724,
+          "MAE": 4.566522989497858,
+          "RMSE": 6.870796223414416,
+          "MB": -0.4299627512015345,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.84480338934954,
+          "MAE": 9.822775289802603,
+          "RMSE": 15.437771766347762,
+          "MB": -0.43535304321351226,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/failed/PG-STGAT/PG_STGAT_all_stages.json",
+        "summary_csv": "test_result/创新方法/PG_STGAT_summary.csv"
+      }
+    },
+    "PSK": {
+      "name": "PSK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.477121",
+        "verified_at": "2026-05-08T15:36:02.477147"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.91568012000662,
+        "MAE": 8.82298149280733,
+        "RMSE": 15.393117410299435,
+        "MB": -0.09797529262002157
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9116481729564274,
+          "MAE": 9.695022546273934,
+          "RMSE": 15.002176744690967,
+          "MB": 0.011307192582400967,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.91568012000662,
+          "MAE": 8.82298149280733,
+          "RMSE": 15.393117410299435,
+          "MB": -0.09797529262002157,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8562313269147686,
+          "MAE": 3.2724127887915047,
+          "RMSE": 4.799575268592879,
+          "MB": -0.011074885435522793,
+          "innovation_verified": true
+        },
+        "stage3": {
+          "R2": 0.9150007375194871,
+          "MAE": 6.928126864679145,
+          "RMSE": 11.424865039192554,
+          "MB": 0.13056187305383835,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 4,
+      "source_files": {
+        "result_json": "Innovation/success/PSK/PSK_all_stages.json"
+      }
+    },
+    "PolyRK": {
+      "name": "PolyRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.477777",
+        "verified_at": "2026-05-08T15:36:02.477800"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9105171921524435,
+        "MAE": 9.147447226855567,
+        "RMSE": 15.85737854269817,
+        "MB": -0.19751791705122804
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8989595953797075,
+          "MAE": 10.252004929416099,
+          "RMSE": 16.043312708894845,
+          "MB": -0.06396088939221573,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9105171921524435,
+          "MAE": 9.147447226855567,
+          "RMSE": 15.85737854269817,
+          "MB": -0.19751791705122804,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8474450121254267,
+          "MAE": 3.3763120566678704,
+          "RMSE": 4.944061683174206,
+          "MB": -0.05071518978340034,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.9059615674258291,
+          "MAE": 7.27299183377234,
+          "RMSE": 12.017003582077646,
+          "MB": -0.015148227669601512,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 3,
+      "source_files": {
+        "result_json": "Innovation/success/PolyRK/PolyRK_all_stages.json"
+      }
+    },
+    "RK_OLS_Poly": {
+      "name": "RK_OLS_Poly",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.478231",
+        "verified_at": "2026-05-08T15:36:02.478254"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9105172591192757,
+        "MAE": 9.147446145983857,
+        "RMSE": 15.85737260905219,
+        "MB": -0.1975152847195496
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8989595930262564,
+          "MAE": 10.252005321846202,
+          "RMSE": 16.043312895736687,
+          "MB": -0.06396101721784456,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9105172591192757,
+          "MAE": 9.147446145983857,
+          "RMSE": 15.85737260905219,
+          "MB": -0.1975152847195496,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.8473877356196056,
+          "MAE": 3.3769292443822345,
+          "RMSE": 4.944989715770791,
+          "MB": -0.05060232462017877,
+          "innovation_verified": true
+        },
+        "stage3": {
+          "R2": 0.9059615951956874,
+          "MAE": 7.27299137160558,
+          "RMSE": 12.017001807747187,
+          "MB": -0.015148447614378073,
+          "innovation_verified": true
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 4,
+      "source_files": {
+        "result_json": "Innovation/success/RK_OLS_Poly/PolyRK_all_stages.json",
+        "summary_csv": "test_result/创新方法/RobustRK_summary.csv"
+      }
+    },
+    "RobustRK": {
+      "name": "RobustRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.478677",
+        "verified_at": "2026-05-08T15:36:02.478699"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9105172058588884,
+        "MAE": 9.147447215224663,
+        "RMSE": 15.857377328228615,
+        "MB": -0.19751793699509804
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8989595396131549,
+          "MAE": 10.252002883911393,
+          "RMSE": 16.043317136233203,
+          "MB": -0.06395699266299425,
+          "innovation_verified": true
+        },
+        "stage1": {
+          "R2": 0.9105172058588884,
+          "MAE": 9.147447215224663,
+          "RMSE": 15.857377328228615,
+          "MB": -0.19751793699509804,
+          "innovation_verified": true
+        },
+        "stage2": {
+          "R2": 0.847399065669866,
+          "MAE": 3.3767652516427056,
+          "RMSE": 4.944806152470178,
+          "MB": -0.05046042442825761,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.9059616006397588,
+          "MAE": 7.272991456168312,
+          "RMSE": 12.017001459903035,
+          "MB": -0.015148468953113501,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 2,
+      "source_files": {
+        "result_json": "Innovation/success/RobustRK/RobustRK_all_stages.json"
+      }
+    },
+    "gVNA": {
+      "name": "gVNA",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.479080",
+        "verified_at": "2026-05-08T15:36:02.479102"
+      },
+      "state": "verified_pass",
+      "metrics": {
+        "R2": 0.9201693328427678,
+        "MAE": 8.401998002305042,
+        "RMSE": 14.977746348609072,
+        "MB": 0.04484614943983799
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.9065682886455801,
+          "MAE": 9.76684726971624,
+          "RMSE": 15.427432757775362,
+          "MB": 0.15818313257562072,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.9201693328427678,
+          "MAE": 8.401998002305042,
+          "RMSE": 14.977746348609072,
+          "MB": 0.04484614943983799,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.8446428819701371,
+          "MAE": 3.366147436623706,
+          "RMSE": 4.9892613355417845,
+          "MB": -0.01742566427115149,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.9117617597293153,
+          "MAE": 6.916900650065843,
+          "RMSE": 11.640507606723395,
+          "MB": 0.13336745925054924,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/success/gVNA/gVNA_adaptive_all_stages.json"
+      }
+    },
+    "ARK_OLS": {
+      "name": "ARK_OLS",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.480194",
+        "verified_at": "2026-05-08T15:36:02.480219"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.8314332931576096,
+        "MAE": 12.898002313101305,
+        "RMSE": 21.764439802288226,
+        "MB": 0.2661317967389185
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8274631410545007,
+          "MAE": 14.017073232247006,
+          "RMSE": 20.964642162559727,
+          "MB": 0.49715175550955265,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.8314332931576096,
+          "MAE": 12.898002313101305,
+          "RMSE": 21.764439802288226,
+          "MB": 0.2661317967389185,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.7369809105605025,
+          "MAE": 4.0946910498665305,
+          "RMSE": 6.4917877127094,
+          "MB": -0.02921380318470358,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.8132769403648124,
+          "MAE": 10.108155567538097,
+          "RMSE": 16.933334103260208,
+          "MB": 0.4676378114611744,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/failed/ARK_OLS/ARK_OLS_all_stages.json"
+      }
+    },
+    "BayesianVariationalFusion": {
+      "name": "BayesianVariationalFusion",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.481351",
+        "verified_at": "2026-05-08T15:36:02.481380"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.7045943626180025,
+        "MAE": 18.775063960114935,
+        "RMSE": 28.81183914900239,
+        "MB": -1.6223174377707799
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.7000888474760527,
+          "MAE": 19.371423317698888,
+          "RMSE": 27.64030418472736,
+          "MB": -1.8695771005727604,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.7045943626180025,
+          "MAE": 18.775063960114935,
+          "RMSE": 28.81183914900239,
+          "MB": -1.6223174377707799,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.3629698513197862,
+          "MAE": 6.848363962630196,
+          "RMSE": 10.103007326408285,
+          "MB": -0.6880898396579833,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.6935190326549968,
+          "MAE": 14.347149521134913,
+          "RMSE": 21.69428067447446,
+          "MB": -1.5022458139680885,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/failed/BayesianVariationalFusion/BayesianVariationalFusion_all_stages.json",
+        "summary_csv": "test_result/创新方法/BayesianVariationalFusion_summary.csv"
+      }
+    },
+    "VCFFM": {
+      "name": "VCFFM",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.483571",
+        "verified_at": "2026-05-08T15:36:02.483597"
+      },
+      "state": "verified_fail",
+      "metrics": {
+        "R2": 0.8559617361720263,
+        "MAE": 12.24888365701718,
+        "RMSE": 20.118728551764786,
+        "MB": -0.40491806877014874
+      },
+      "best_stage": "stage1",
+      "all_stages": {
+        "pre_exp": {
+          "R2": 0.8384372729720673,
+          "MAE": 13.581052004547525,
+          "RMSE": 20.286965835465423,
+          "MB": -0.5979831782255531,
+          "innovation_verified": false
+        },
+        "stage1": {
+          "R2": 0.8559617361720263,
+          "MAE": 12.24888365701718,
+          "RMSE": 20.118728551764786,
+          "MB": -0.40491806877014874,
+          "innovation_verified": false
+        },
+        "stage2": {
+          "R2": 0.7144726506961188,
+          "MAE": 4.591432087116055,
+          "RMSE": 6.763858777467578,
+          "MB": -0.4108681305298093,
+          "innovation_verified": false
+        },
+        "stage3": {
+          "R2": 0.8472325098658318,
+          "MAE": 9.765084677205117,
+          "RMSE": 15.316480118999294,
+          "MB": -0.4941798832110551,
+          "innovation_verified": false
+        }
+      },
+      "stages_verified": 4,
+      "stages_passed": 0,
+      "source_files": {
+        "result_json": "Innovation/failed/VCFFM/VCFFM_all_stages.json",
+        "summary_csv": "test_result/创新方法/VCFFM_summary.csv"
+      }
+    },
+    "ARK-OLS-Ensemble": {
+      "name": "ARK-OLS-Ensemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.484763"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ARK_OLS_summary.csv"
+      }
+    },
+    "AdaptiveOnlineEnsemble": {
+      "name": "AdaptiveOnlineEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.485035"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/AdaptiveOnlineEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/AdaptiveOnlineEnsemble.py"
+      }
+    },
+    "AdvancedRK_RBF": {
+      "name": "AdvancedRK_RBF",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.485350"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/AdvancedRK_summary.csv"
+      }
+    },
+    "CSP_RK_HLG_MaternHybrid": {
+      "name": "CSP_RK_HLG_MaternHybrid",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486386"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRKHLG_summary.csv"
+      }
+    },
+    "CSP_RK_HLG_Matern": {
+      "name": "CSP_RK_HLG_Matern",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486410"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRKHLG_summary.csv"
+      }
+    },
+    "CSP_RK_HLG_RBF": {
+      "name": "CSP_RK_HLG_RBF",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486424"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRKHLG_summary.csv"
+      }
+    },
+    "CSP_RK_INT": {
+      "name": "CSP_RK_INT",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486672"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRKINT_summary.csv"
+      }
+    },
+    "CSP_RK_NoINT": {
+      "name": "CSP_RK_NoINT",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486694"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRKINT_summary.csv"
+      }
+    },
+    "RK_Poly": {
+      "name": "RK_Poly",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486972"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PSK_summary.csv"
+      }
+    },
+    "CSP_RK": {
+      "name": "CSP_RK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.486993"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/CSPRK_summary.csv"
+      }
+    },
+    "ConservativeTransport": {
+      "name": "ConservativeTransport",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.487265"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ConservativeTransport_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/ConservativeTransport.py"
+      }
+    },
+    "EnhancedStackingEnsemble": {
+      "name": "EnhancedStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.487517"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/EnhancedStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/EnhancedStackingEnsemble.py"
+      }
+    },
+    "EnsembleRK": {
+      "name": "EnsembleRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.487852"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/EnsembleRK_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/EnsembleRK.py"
+      }
+    },
+    "ExtremeStackingEnsemble": {
+      "name": "ExtremeStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.488119"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ExtremeStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/ExtremeStackingEnsemble.py"
+      }
+    },
+    "FeatureStackingEnsemble": {
+      "name": "FeatureStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.488594"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/FeatureStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/FeatureStackingEnsemble.py"
+      }
+    },
+    "GradientBoostingEnsemble": {
+      "name": "GradientBoostingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.489168"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/GradientBoostingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/GradientBoostingEnsemble.py"
+      }
+    },
+    "RK_Homo": {
+      "name": "RK_Homo",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.489577"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/HGPRK_summary.csv"
+      }
+    },
+    "HGP_RK": {
+      "name": "HGP_RK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.489601"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/HGPRK_summary.csv"
+      }
+    },
+    "LBGPR": {
+      "name": "LBGPR",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.489909"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/LBGPR_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/LBGPR.py"
+      }
+    },
+    "LogRatioEnsemble": {
+      "name": "LogRatioEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.490168"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/LogRatioEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/LogRatioEnsemble.py"
+      }
+    },
+    "RK_Single": {
+      "name": "RK_Single",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.490502"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MKGPRK_summary.csv"
+      }
+    },
+    "MKGPR_RK": {
+      "name": "MKGPR_RK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.490529"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MKGPRK_summary.csv"
+      }
+    },
+    "MSAK": {
+      "name": "MSAK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.490837"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MSAK_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/MSAK.py"
+      }
+    },
+    "MSEF": {
+      "name": "MSEF",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.491127"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MSEF_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/MSEF.py"
+      }
+    },
+    "RK_single_scale": {
+      "name": "RK_single_scale",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.491431"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MSRK_summary.csv"
+      }
+    },
+    "MaternGPEnsemble": {
+      "name": "MaternGPEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.491698"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MaternGPEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/MaternGPEnsemble.py"
+      }
+    },
+    "MultiKernelGPREnsemble": {
+      "name": "MultiKernelGPREnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.491971"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MultiKernelGPREnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/MultiKernelGPREnsemble.py"
+      }
+    },
+    "MultiLevelStackingEnsemble": {
+      "name": "MultiLevelStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.492274"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/MultiLevelStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/MultiLevelStackingEnsemble.py"
+      }
+    },
+    "NNResidualEnsemble": {
+      "name": "NNResidualEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.492538"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/NNResidualEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/NNResidualEnsemble.py"
+      }
+    },
+    "PDEICNN": {
+      "name": "PDEICNN",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.492790"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PDEICNN_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/PDEICNN.py"
+      }
+    },
+    "RK_Spline": {
+      "name": "RK_Spline",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.493319"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PSK_summary.csv"
+      }
+    },
+    "PolyEnsemble": {
+      "name": "PolyEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.493596"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PolyEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/PolyEnsemble.py"
+      }
+    },
+    "PolyGPRAdapt": {
+      "name": "PolyGPRAdapt",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.493843"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PolyGPRAdapt_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/PolyGPRAdapt.py"
+      }
+    },
+    "PolyRK_Linear": {
+      "name": "PolyRK_Linear",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.494133"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PolyRK_summary.csv"
+      }
+    },
+    "PolyRK_Poly": {
+      "name": "PolyRK_Poly",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.494155"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/PolyRK_summary.csv"
+      }
+    },
+    "QuantileHuberEnsemble": {
+      "name": "QuantileHuberEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.494409"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/QuantileHuberEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/QuantileHuberEnsemble.py"
+      }
+    },
+    "RK_Huber_Poly": {
+      "name": "RK_Huber_Poly",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.494749"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/RobustRK_summary.csv"
+      }
+    },
+    "ResidualKriging": {
+      "name": "ResidualKriging",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495093"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ResidualKriging_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/ResidualKriging.py"
+      },
+      "fingerprint": "residual_kriging_adaptive_variogram_v1"
+    },
+    "SPIN-Kr": {
+      "name": "SPIN-Kr",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495831"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SPINKr_BMSFGeostat_CorrDiff3km_summary.csv"
+      }
+    },
+    "BMSF-Geostat": {
+      "name": "BMSF-Geostat",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495856"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SPINKr_BMSFGeostat_CorrDiff3km_summary.csv"
+      }
+    },
+    "CorrDiff-3km": {
+      "name": "CorrDiff-3km",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495890"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SPINKr_BMSFGeostat_CorrDiff3km_summary.csv"
+      }
+    },
+    "RK-Poly": {
+      "name": "RK-Poly",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495905"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ST_CRK_Jan_July_summary.csv"
+      }
+    },
+    "CMAQ": {
+      "name": "CMAQ",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.495921"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SPINKr_BMSFGeostat_CorrDiff3km_summary.csv"
+      }
+    },
+    "SQDM": {
+      "name": "SQDM",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.496231"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SQDM_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/SQDM.py"
+      }
+    },
+    "STRK": {
+      "name": "STRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.496494"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/STRK_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/STRK.py"
+      }
+    },
+    "VNA": {
+      "name": "VNA",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.496840"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ST_CRK_Jan_July_summary.csv"
+      }
+    },
+    "ST-CRK": {
+      "name": "ST-CRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.496878"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/ST_CRK_Jan_July_summary.csv"
+      }
+    },
+    "SpatialZoneEnsemble": {
+      "name": "SpatialZoneEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.497212"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SpatialZoneEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/SpatialZoneEnsemble.py"
+      }
+    },
+    "StackingEnsemble": {
+      "name": "StackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.497528"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/StackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/StackingEnsemble.py"
+      }
+    },
+    "SuperEnsemble": {
+      "name": "SuperEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.497821"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SuperEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/SuperEnsemble.py"
+      }
+    },
+    "SuperStackingEnsemble": {
+      "name": "SuperStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.498097"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/SuperStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/SuperStackingEnsemble.py"
+      }
+    },
+    "TripleEnsemble": {
+      "name": "TripleEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.498390"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/TripleEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/TripleEnsemble.py"
+      }
+    },
+    "UltimateStackingEnsemble": {
+      "name": "UltimateStackingEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.498691"
+      },
+      "state": "implemented",
+      "source_files": {
+        "summary_csv": "test_result/创新方法/UltimateStackingEnsemble_summary.csv",
+        "code": "CodeWorkSpace/新融合方法代码/UltimateStackingEnsemble.py"
+      }
+    },
+    "BMSF_Geostat": {
+      "name": "BMSF_Geostat",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500001"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/BMSF_Geostat.py"
+      }
+    },
+    "CR_ABC": {
+      "name": "CR_ABC",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500013"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CR_ABC.py"
+      }
+    },
+    "CSPRKATO": {
+      "name": "CSPRKATO",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500018"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CSPRKATO.py"
+      }
+    },
+    "CSPRKHLG": {
+      "name": "CSPRKHLG",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500021"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CSPRKHLG.py"
+      }
+    },
+    "CSPRKINT": {
+      "name": "CSPRKINT",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500024"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CSPRKINT.py"
+      }
+    },
+    "CopulaSpatialFusion": {
+      "name": "CopulaSpatialFusion",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500029"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CopulaSpatialFusion.py"
+      },
+      "fingerprint": "copula_non_gaussian_spatial_fusion_gamma_gaussian_v1"
+    },
+    "CorrDiff_Downscaling": {
+      "name": "CorrDiff_Downscaling",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500032"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CorrDiff_Downscaling.py"
+      }
+    },
+    "CrossDayValidation": {
+      "name": "CrossDayValidation",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500035"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/CrossDayValidation.py"
+      }
+    },
+    "HGPRK": {
+      "name": "HGPRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500047"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/HGPRK.py"
+      }
+    },
+    "HybridEAVNA": {
+      "name": "HybridEAVNA",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500050"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/HybridEAVNA.py"
+      },
+      "fingerprint": "hybrid_evna_avna_fingerprint"
+    },
+    "MKGPRK": {
+      "name": "MKGPRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500056"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/MKGPRK.py"
+      }
+    },
+    "MultiKEnsemble": {
+      "name": "MultiKEnsemble",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500065"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/MultiKEnsemble.py"
+      }
+    },
+    "PG_STGAT": {
+      "name": "PG_STGAT",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500074"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/PG_STGAT.py"
+      }
+    },
+    "RRK": {
+      "name": "RRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500083"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/RRK.py"
+      }
+    },
+    "SLOOCV_AK": {
+      "name": "SLOOCV_AK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500088"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/SLOOCV_AK.py"
+      }
+    },
+    "SPIN_GraphKernel_Kriging": {
+      "name": "SPIN_GraphKernel_Kriging",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500091"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/SPIN_GraphKernel_Kriging.py"
+      }
+    },
+    "ST_CRK": {
+      "name": "ST_CRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500125"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/ST_CRK.py"
+      }
+    },
+    "VG_VNA": {
+      "name": "VG_VNA",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500147"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/VG_VNA.py"
+      }
+    },
+    "WaveletGPR": {
+      "name": "WaveletGPR",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500153"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/WaveletGPR.py"
+      },
+      "fingerprint": "wavelet_multiscale_gpr_residual_db4_3level_v1"
+    },
+    "gVNA_full_domain": {
+      "name": "gVNA_full_domain",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500160"
+      },
+      "state": "implemented",
+      "source_files": {
+        "code": "CodeWorkSpace/新融合方法代码/gVNA_full_domain.py"
+      }
+    },
+    "BayesianMultisourceFusion": {
+      "name": "BayesianMultisourceFusion",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500898"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_BayesianMultisourceFusion.md"
+      }
+    },
+    "CMAQ梯度各向异性克里金": {
+      "name": "CMAQ梯度各向异性克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500913"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_CMAQ梯度各向异性克里金.md"
+      }
+    },
+    "CSP_RK_AdaptiveThreshold": {
+      "name": "CSP_RK_AdaptiveThreshold",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500919"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_CSP_RK_AdaptiveThreshold.md"
+      }
+    },
+    "CSP_RK_HybridLayerGPR": {
+      "name": "CSP_RK_HybridLayerGPR",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500923"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_CSP_RK_HybridLayerGPR.md"
+      }
+    },
+    "CSP_RK_Interaction": {
+      "name": "CSP_RK_Interaction",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500926"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_CSP_RK_Interaction.md"
+      }
+    },
+    "ConcentrationStratifiedPolyRK": {
+      "name": "ConcentrationStratifiedPolyRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500930"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_ConcentrationStratifiedPolyRK.md"
+      }
+    },
+    "GradientAnisotropicKriging": {
+      "name": "GradientAnisotropicKriging",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500935"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_GradientAnisotropicKriging.md"
+      }
+    },
+    "HeteroscedasticGPRPolyRK": {
+      "name": "HeteroscedasticGPRPolyRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500938"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_HeteroscedasticGPRPolyRK.md"
+      }
+    },
+    "LocalKernelGPR": {
+      "name": "LocalKernelGPR",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500942"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_LocalKernelGPR.md"
+      }
+    },
+    "MultiKernelGPRPolyRK": {
+      "name": "MultiKernelGPRPolyRK",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500946"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_MultiKernelGPRPolyRK.md"
+      }
+    },
+    "SpatialQuantileMapping": {
+      "name": "SpatialQuantileMapping",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500952"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_SpatialQuantileMapping.md"
+      }
+    },
+    "多尺度残差克里金": {
+      "name": "多尺度残差克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500957"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_多尺度残差克里金.md"
+      }
+    },
+    "多尺度稳定度自适应克里金": {
+      "name": "多尺度稳定度自适应克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500961"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_多尺度稳定度自适应克里金.md"
+      }
+    },
+    "多项式样条克里金": {
+      "name": "多项式样条克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500964"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_多项式样条克里金.md"
+      }
+    },
+    "时空残差共克里金": {
+      "name": "时空残差共克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500967"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_时空残差共克里金.md"
+      }
+    },
+    "鲁棒残差克里金": {
+      "name": "鲁棒残差克里金",
+      "timestamps": {
+        "created_at": "2026-05-08T15:36:02.500990"
+      },
+      "state": "designed",
+      "source_files": {
+        "design": "SmartToCode/创新方法指令/Innovation_鲁棒残差克里金.md"
+      }
+    }
+  }
+}

@@ -328,6 +328,17 @@ exit_reason: "分析完成，方法文档已生成"
 4. 生成 INVENTORY.md 记录已有文件
 5. 基于已有方案继续设计，不要重复设计已有方案
 
+## 【方法注册表检查】（必须执行）
+
+读取 {project_root}/method_registry.json，获取方法状态：
+- state=verified_pass 或 verified_fail 的方法 → **跳过设计**（已验证完成）
+- state=excluded 的方法 → **跳过设计**（已排除）
+- state=implemented 的方法 → **跳过设计**（已实现，待验证）
+- state=designed 的方法 → **跳过设计**（已有方案）
+- **仅设计注册表中不存在的新方法**
+
+如果注册表不存在，先运行: python -m shared.build_registry
+
 ## 你的任务
 
 1. 读取 {project_root}/MethodToSmart/ 所有方法文档
@@ -462,6 +473,16 @@ exit_reason: "设计完成，方案指令已生成"
 3. 生成 INVENTORY.md 记录已有文件
 4. 基于已有代码继续开发，不要重复实现已有方法
 
+## 【方法注册表检查】（必须执行）
+
+读取 {project_root}/method_registry.json，获取方法状态：
+- state=verified_pass/verified_fail/excluded → **跳过实现**（已验证或排除）
+- state=implemented → **跳过实现**（代码已存在）
+- state=designed → **需要实现**（有方案但未编码）
+- 注册表中不存在但有设计指令的方法 → **需要实现**
+
+如果注册表不存在，先运行: python -m shared.build_registry
+
 ## 你的任务
 
 1. 读取 {project_root}/SmartToCode/ 所有指令文件
@@ -588,6 +609,16 @@ exit_reason: "实现完成，代码已生成"
 3. 读取 comparison_report.md 了解当前最佳结果
 4. 生成 INVENTORY.md 记录已有文件
 5. 基于已有测试结果继续，不要重复测试已有方法
+
+## 【方法注册表检查】（必须执行）
+
+读取 {project_root}/method_registry.json，获取方法状态：
+- state=verified_pass 或 verified_fail → **跳过验证**（已有结果）
+- state=excluded → **跳过验证**（已排除）
+- state=implemented → **需要验证**（代码就绪，等待测试）
+- 验证完成后，更新注册表：python -m shared.build_registry --merge
+
+如果注册表不存在，先运行: python -m shared.build_registry
 
 ## 你的任务
 

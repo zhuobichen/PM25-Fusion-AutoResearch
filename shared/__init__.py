@@ -18,3 +18,4 @@ from shared.geo_utils import (
     haversine_distance,
     idw_interpolate,
 )
+from shared.method_registry import MethodRegistry
