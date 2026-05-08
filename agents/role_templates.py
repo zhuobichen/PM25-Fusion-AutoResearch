@@ -627,10 +627,21 @@ exit_reason: "实现完成，代码已生成"
 
 ## 你的任务
 
-1. 执行十折交叉验证
-2. 计算R²、MAE、RMSE、MB指标
-3. 验证创新是否成立
-4. 输出到 {project_root}/test_result/
+1. **生成验证脚本**（如果不存在）
+2. 执行十折交叉验证
+3. 计算R²、MAE、RMSE、MB指标
+4. 验证创新是否成立
+5. 输出到 {project_root}/test_result/
+
+## 生成验证脚本（关键步骤）
+
+扫描 {project_root}/CodeWorkSpace/新融合方法代码/ 中的 .py 文件，
+对比 {project_root}/test_result/创新方法/ 中已有的 `*_十折标准模式.py` 脚本：
+
+- **有代码但无验证脚本的方法** → 必须生成验证脚本
+- 参考已有脚本（如 AdvancedRK_十折标准模式.py）的结构
+- 每个新方法生成一个 `test_result/创新方法/{方法名}_十折标准模式.py`
+- 脚本必须包含：十折交叉验证、多阶段验证（pre_exp/stage1/stage2/stage3）、指标计算
 
 ## 基准带校验（必须先执行）
 

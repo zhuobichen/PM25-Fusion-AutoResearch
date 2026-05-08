@@ -538,6 +538,90 @@ class PhaseRunner:
 # 主流程
 # ============================================================
 
+def _generate_validation_scripts(method_names: list, env: dict):
+    """调用 Claude CLI 为新方法生成验证脚本。"""
+    if not method_names:
+        return
+
+    # 构建 prompt
+    method_list = '\n'.join(f'- {name}' for name in method_names)
+    prompt = f"""你是一个严格的机器学习算法评测专家。
+
+## 任务
+
+为以下新方法生成十折交叉验证脚本：
+
+{method_list}
+
+## 要求
+
+1. 读取 {PROJECT_ROOT}/CodeWorkSpace/新融合方法代码/ 中每个方法的代码
+2. 参考 {PROJECT_ROOT}/test_result/创新方法/AdvancedRK_十折标准模式.py 的结构
+3. 为每个方法生成 test_result/创新方法/{{方法名}}_十折标准模式.py
+4. 脚本必须包含：
+   - 十折交叉验证（fold_split_table_daily.csv）
+   - 多阶段验证（pre_exp/stage1/stage2/stage3）
+   - 指标计算（R2, MAE, RMSE, MB）
+   - 结果保存为 {{方法名}}_all_stages.json 和 {{方法名}}_summary.csv
+
+## 参考脚本结构
+
+读取 AdvancedRK_十折标准模式.py 了解完整结构，包括：
+- 数据加载（CMAQ + Monitor）
+- 十折循环（train/test split）
+- 模型拟合和预测
+- 指标计算和保存
+
+完成后退出。
+"""
+
+    # 调用 Claude CLI
+    claude_cmd = _find_claude()
+    cmd = [claude_cmd, "-p", "--output-format", "text"]
+
+    print(f"  [生成] 调用 Claude CLI 生成 {len(method_names)} 个验证脚本...")
+    try:
+        process = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            encoding='utf-8',
+            errors='replace',
+        )
+        stdout_data, _ = process.communicate(input=prompt, timeout=600)
+
+        if process.returncode == 0:
+            print(f"  [完成] 验证脚本生成成功")
+        else:
+            print(f"  [警告] Claude CLI 返回码: {process.returncode}")
+    except subprocess.TimeoutExpired:
+        process.kill()
+        print(f"  [超时] 验证脚本生成超时")
+    except Exception as e:
+        print(f"  [错误] 验证脚本生成失败: {e}")
+
+
+def _find_claude():
+    """查找 claude CLI 路径。"""
+    import shutil
+    claude_path = shutil.which('claude')
+    if claude_path:
+        return claude_path
+    npm_paths = [
+        os.path.expandvars(r'%APPDATA%\npm\claude.CMD'),
+        os.path.expandvars(r'%APPDATA%\npm\claude.cmd'),
+        os.path.expandvars(r'%APPDATA%\npm\claude'),
+    ]
+    for p in npm_paths:
+        if os.path.exists(p):
+            return p
+    return 'claude'
+
+
 def run_verify_phase():
     """Phase 5 特殊处理：直接运行 Python 验证脚本，不经过 Claude agent"""
     print(f"\n{'=' * 60}")
@@ -579,6 +663,39 @@ def run_verify_phase():
         for f in os.listdir(innovation_dir):
             if f.endswith('_十折标准模式.py') or f.endswith('_十折验证.py'):
                 scripts.append(os.path.join(innovation_dir, f))
+
+    # 2.0 检查是否有新方法需要生成验证脚本
+    code_dir = data_path('CodeWorkSpace/新融合方法代码')
+    if os.path.exists(code_dir):
+        existing_script_names = set()
+        for s in scripts:
+            basename = os.path.basename(s)
+            name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
+            existing_script_names.add(name.replace('-', '_'))
+
+        # 找出有代码但无验证脚本的方法
+        skip_prefixes = ('compare_', 'find_best_', 'validate_', 'lambda_', 'spatial_stat_',
+                         'statistical_', 'robust_variogram_', 'mle_', 'elegant_', 'adaptive_')
+        new_methods = []
+        for py_file in os.listdir(code_dir):
+            if not py_file.endswith('.py'):
+                continue
+            if py_file.startswith(skip_prefixes):
+                continue
+            method_name = py_file[:-3]
+            if method_name.replace('-', '_') not in existing_script_names:
+                new_methods.append(method_name)
+
+        if new_methods:
+            print(f"\n  发现 {len(new_methods)} 个新方法需要生成验证脚本: {', '.join(new_methods[:5])}{'...' if len(new_methods) > 5 else ''}")
+            # 调用 Claude CLI 生成验证脚本
+            _generate_validation_scripts(new_methods, env)
+            # 重新扫描脚本
+            scripts = []
+            if os.path.exists(innovation_dir):
+                for f in os.listdir(innovation_dir):
+                    if f.endswith('_十折标准模式.py') or f.endswith('_十折验证.py'):
+                        scripts.append(os.path.join(innovation_dir, f))
 
     if not scripts:
         print("\n  未找到创新方法验证脚本")
