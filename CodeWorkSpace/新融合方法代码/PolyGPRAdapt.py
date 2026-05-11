@@ -455,7 +455,7 @@ def cross_validate(method_func, fold_split_table, selected_days, **kwargs):
 
         # 筛选日期数据
         day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-        day_df = day_df.merge(fold_df, on='Site', how='left')
+        day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
         day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
         if len(day_df) == 0:

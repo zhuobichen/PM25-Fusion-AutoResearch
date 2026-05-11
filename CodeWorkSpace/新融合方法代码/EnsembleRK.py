@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 EnsembleRK - 多模型集成残差克里金
 ===================================
 将ResidualKriging、eVNA、aVNA三种方法进行加权集成
@@ -74,7 +79,7 @@ def run_ensemble_rk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -206,6 +211,11 @@ def run_ensemble_rk_ten_fold(selected_day='2020-01-01'):
     # 最终评估
     final_pred = best_weights[0] * rk_all + best_weights[1] * evna_all + best_weights[2] * avna_all
     final_metrics = compute_metrics(true_all, final_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = final_pred
+
 
     print("\n" + "="*60)
     print("Final EnsembleRK Results")

@@ -267,9 +267,18 @@ class MethodRegistry:
             'MB': all_stages[best_stage].get('MB'),
         }
 
-        # 确定状态
+        # 确定状态：优先使用 outcome 字段（对齐设计文档 9.4 分阶段执行流程）
         if state is None:
-            state = STATE_VERIFIED_PASS if stages_passed > 0 else STATE_VERIFIED_FAIL
+            outcome = raw.get('outcome', '')
+            if outcome in ('fully_established', 'secondary_innovation'):
+                state = STATE_VERIFIED_PASS
+            elif outcome in ('partially_established',):
+                state = STATE_VERIFIED_FAIL
+            elif outcome in ('failed', 'seasonally_limited'):
+                state = STATE_VERIFIED_FAIL
+            else:
+                # 兼容旧格式：无 outcome 字段时按 stages_passed 判断
+                state = STATE_VERIFIED_PASS if stages_passed > 0 else STATE_VERIFIED_FAIL
 
         # 注册或更新
         if not self.method_exists(name):
@@ -314,7 +323,8 @@ class MethodRegistry:
             else:
                 # Schema A 标准
                 m = metrics_raw
-                verified = judgment.get('innovation_verified', False)
+                # 兼容新模板格式（innovation_pass 在阶段级别）
+                verified = stage_data.get('innovation_pass', judgment.get('innovation_verified', False))
 
         # Schema B: 扁平，直接有 R2 等键
         elif 'R2' in stage_data:
@@ -324,13 +334,18 @@ class MethodRegistry:
         else:
             return None
 
-        return {
+        result = {
             'R2': float(m.get('R2', 0)),
             'MAE': float(m.get('MAE', 0)),
             'RMSE': float(m.get('RMSE', 0)),
             'MB': float(m.get('MB', 0)),
             'innovation_verified': bool(verified),
         }
+        # 保留 days_run（新模板格式）
+        days_run = stage_data.get('days_run')
+        if days_run is not None:
+            result['days_run'] = int(days_run)
+        return result
 
     def _compute_best_metrics(self, entry: dict):
         """根据 all_stages 重新计算 best_stage 和顶层 metrics。"""

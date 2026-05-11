@@ -343,7 +343,7 @@ def ten_fold_for_day_msagark(selected_day):
     fold_df = pd.read_csv(FOLD_FILE)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     if len(day_df) < 100:

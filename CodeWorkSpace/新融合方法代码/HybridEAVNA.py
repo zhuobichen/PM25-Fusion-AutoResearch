@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 HybridEAVNA - 混合比率-偏差法
 ==============================
 结合eVNA和aVNA的优点，通过混合系数beta融合两种方法的预测结果
@@ -178,7 +183,7 @@ def run_hybrid_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -305,6 +310,11 @@ def run_hybrid_ten_fold(selected_day='2020-01-01'):
     all_true = np.concatenate([results[f]['y_true'] for f in range(1, 11) if results[f]])
     all_pred = np.concatenate([results[f]['y_pred'] for f in range(1, 11) if results[f]])
     final_metrics = compute_metrics(all_true, all_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = all_true
+    _last_y_pred = all_pred
+
 
     print("\n" + "="*60)
     print("Final Results (HybridEAVNA)")

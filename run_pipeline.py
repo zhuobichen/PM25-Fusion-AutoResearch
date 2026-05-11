@@ -539,87 +539,23 @@ class PhaseRunner:
 # ============================================================
 
 def _generate_validation_scripts(method_names: list, env: dict):
-    """调用 Claude CLI 为新方法生成验证脚本。"""
+    """使用模板生成器为新方法生成验证脚本。"""
     if not method_names:
         return
 
-    # 构建 prompt
-    method_list = '\n'.join(f'- {name}' for name in method_names)
-    prompt = f"""你是一个严格的机器学习算法评测专家。
-
-## 任务
-
-为以下新方法生成十折交叉验证脚本：
-
-{method_list}
-
-## 要求
-
-1. 读取 {PROJECT_ROOT}/CodeWorkSpace/新融合方法代码/ 中每个方法的代码
-2. 参考 {PROJECT_ROOT}/test_result/创新方法/AdvancedRK_十折标准模式.py 的结构
-3. 为每个方法生成 test_result/创新方法/{{方法名}}_十折标准模式.py
-4. 脚本必须包含：
-   - 十折交叉验证（fold_split_table_daily.csv）
-   - 多阶段验证（pre_exp/stage1/stage2/stage3）
-   - 指标计算（R2, MAE, RMSE, MB）
-   - 结果保存为 {{方法名}}_all_stages.json 和 {{方法名}}_summary.csv
-
-## 参考脚本结构
-
-读取 AdvancedRK_十折标准模式.py 了解完整结构，包括：
-- 数据加载（CMAQ + Monitor）
-- 十折循环（train/test split）
-- 模型拟合和预测
-- 指标计算和保存
-
-完成后退出。
-"""
-
-    # 调用 Claude CLI
-    claude_cmd = _find_claude()
-    cmd = [claude_cmd, "-p", "--output-format", "text"]
-
-    print(f"  [生成] 调用 Claude CLI 生成 {len(method_names)} 个验证脚本...")
+    print(f"  [生成] 为 {len(method_names)} 个新方法生成验证脚本...")
     try:
-        process = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            cwd=PROJECT_ROOT,
-            env=env,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
-        )
-        stdout_data, _ = process.communicate(input=prompt, timeout=600)
-
-        if process.returncode == 0:
-            print(f"  [完成] 验证脚本生成成功")
-        else:
-            print(f"  [警告] Claude CLI 返回码: {process.returncode}")
-    except subprocess.TimeoutExpired:
-        process.kill()
-        print(f"  [超时] 验证脚本生成超时")
+        from shared.generate_validation_scripts import generate_script
+        generated = 0
+        for method_name in method_names:
+            try:
+                generate_script(method_name, PROJECT_ROOT, dry_run=False)
+                generated += 1
+            except Exception as e:
+                print(f"    [错误] {method_name}: {e}")
+        print(f"  [完成] 成功生成 {generated}/{len(method_names)} 个验证脚本")
     except Exception as e:
         print(f"  [错误] 验证脚本生成失败: {e}")
-
-
-def _find_claude():
-    """查找 claude CLI 路径。"""
-    import shutil
-    claude_path = shutil.which('claude')
-    if claude_path:
-        return claude_path
-    npm_paths = [
-        os.path.expandvars(r'%APPDATA%\npm\claude.CMD'),
-        os.path.expandvars(r'%APPDATA%\npm\claude.cmd'),
-        os.path.expandvars(r'%APPDATA%\npm\claude'),
-    ]
-    for p in npm_paths:
-        if os.path.exists(p):
-            return p
-    return 'claude'
 
 
 def run_verify_phase():
@@ -688,7 +624,7 @@ def run_verify_phase():
 
         if new_methods:
             print(f"\n  发现 {len(new_methods)} 个新方法需要生成验证脚本: {', '.join(new_methods[:5])}{'...' if len(new_methods) > 5 else ''}")
-            # 调用 Claude CLI 生成验证脚本
+            # 使用模板生成器生成验证脚本
             _generate_validation_scripts(new_methods, env)
             # 重新扫描脚本
             scripts = []
@@ -702,62 +638,68 @@ def run_verify_phase():
         print("  请先完成 Phase 4 (代码实现)")
         return False
 
-    # 2.1 读取注册表，跳过已验证方法
-    skip_methods = set()
-    skip_methods_normalized = {}  # normalized_name → original_name
-    try:
-        from shared.method_registry import MethodRegistry
-        registry = MethodRegistry()
-        skip_methods = registry.get_tested_method_names()
-        for m in skip_methods:
-            skip_methods_normalized[m.replace('-', '_')] = m
-        if skip_methods:
-            print(f"\n  注册表中已有 {len(skip_methods)} 个已验证方法，将跳过: {', '.join(sorted(skip_methods))}")
-    except Exception:
-        pass  # 注册表不存在时正常执行
+    scripts_to_run = scripts
 
-    # 2.2 过滤脚本（归一化连字符/下划线以匹配注册表）
-    scripts_to_run = []
-    for script in scripts:
-        basename = os.path.basename(script)
-        # 从文件名提取方法名：PolyRK_十折标准模式.py → PolyRK
-        method_name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
-        method_name_normalized = method_name.replace('-', '_')
-        if method_name_normalized in skip_methods_normalized:
-            original = skip_methods_normalized[method_name_normalized]
-            print(f"  [跳过] {basename} — 方法 {original} 已有验证结果")
-        else:
-            scripts_to_run.append(script)
-
-    if not scripts_to_run:
-        print(f"\n  所有 {len(scripts)} 个创新方法均已验证，无需重复运行")
-        PipelineState.phase_completed('verify')
-        print(f"\n[完成] Phase 5 (verify) — 全部方法已验证")
-        return True
-
-    print(f"\n[2/2] 运行 {len(scripts_to_run)} 个创新方法验证脚本 (跳过 {len(scripts) - len(scripts_to_run)} 个):")
+    # === 阶段 2a: 预验证 (pre_exp) ===
+    print(f"\n[2a/3] 预验证 (pre_exp) — {len(scripts_to_run)} 个方法:")
+    pre_passed = []
+    pre_failed = []
     for i, script in enumerate(scripts_to_run):
         basename = os.path.basename(script)
         method_name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
-        print(f"  [{i + 1}/{len(scripts_to_run)}] {basename}")
+        print(f"  [{i + 1}/{len(scripts_to_run)}] {method_name}", end=" ")
+        result = subprocess.run(
+            [sys.executable, script, '--pre-only'],
+            cwd=PROJECT_ROOT, env=env,
+            text=True, encoding='utf-8', errors='replace'
+        )
+        # 检查预验证结果
+        pre_json = data_path(f'test_result/创新方法/{method_name}_pre_exp.json')
+        if os.path.exists(pre_json):
+            with open(pre_json, 'r', encoding='utf-8') as f:
+                pre_data = json.load(f)
+            if pre_data.get('passed'):
+                pre_passed.append((method_name, script))
+                print("→ 通过")
+            else:
+                pre_failed.append(method_name)
+                print("→ 未通过")
+        else:
+            pre_failed.append(method_name)
+            print("→ 无结果")
+
+    print(f"\n  预验证结果: {len(pre_passed)} 通过, {len(pre_failed)} 未通过")
+    if pre_failed:
+        print(f"  未通过方法: {', '.join(pre_failed[:10])}{'...' if len(pre_failed) > 10 else ''}")
+
+    if not pre_passed:
+        print("\n  所有方法预验证均未通过，无需正式验证")
+        PipelineState.phase_completed('verify')
+        return True
+
+    # === 阶段 2b: 正式验证 (stage1/stage2/stage3) ===
+    print(f"\n[2b/3] 正式验证 — {len(pre_passed)} 个方法通过预验证:")
+    for i, (method_name, script) in enumerate(pre_passed):
+        print(f"  [{i + 1}/{len(pre_passed)}] {method_name}")
         result = subprocess.run(
             [sys.executable, script],
             cwd=PROJECT_ROOT, env=env,
             text=True, encoding='utf-8', errors='replace'
         )
         if result.returncode != 0:
-            print(f"  [失败] {basename} 退出码: {result.returncode}")
-            return False
-        print(f"  [完成] {basename}")
+            print(f"  [失败] {method_name} 退出码: {result.returncode}")
+            # 不返回 False，继续验证其他方法
+            continue
+        print(f"  [完成] {method_name}")
 
         # 验证后更新注册表
         try:
-            _update_registry_after_verify(method_name, registry)
+            _update_registry_after_verify(method_name)
         except Exception as e:
             print(f"  [警告] 注册表更新失败: {e}")
 
     PipelineState.phase_completed('verify')
-    print(f"\n[完成] Phase 5 (verify) 全部验证通过")
+    print(f"\n[完成] Phase 5 (verify) — 预验证 {len(scripts_to_run)} 个, 正式验证 {len(pre_passed)} 个")
     return True
 
 
@@ -770,9 +712,11 @@ def _update_registry_after_verify(method_name: str, registry=None):
         except Exception:
             return
 
-    # 查找结果 JSON
+    # 查找结果 JSON（优先 test_result/创新方法/，其次 Innovation/）
     import glob as _glob
+    test_result_json = os.path.join(PROJECT_ROOT, 'test_result', '创新方法', f'{method_name}_all_stages.json')
     patterns = [
+        test_result_json,
         os.path.join(PROJECT_ROOT, 'Innovation', 'success', method_name, f'{method_name}_all_stages.json'),
         os.path.join(PROJECT_ROOT, 'Innovation', 'failed', method_name, f'{method_name}_all_stages.json'),
         os.path.join(PROJECT_ROOT, 'Innovation', '*', method_name, '*_all_stages.json'),
@@ -786,30 +730,7 @@ def _update_registry_after_verify(method_name: str, registry=None):
             print(f"  [注册表] 已更新 {method_name}")
             return
 
-    # 没有 all_stages JSON，尝试从 summary CSV 更新
-    csv_path = os.path.join(PROJECT_ROOT, 'test_result', '创新方法', f'{method_name}_summary.csv')
-    if os.path.exists(csv_path):
-        import csv as _csv
-        with open(csv_path, 'r', encoding='utf-8') as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                name = (row.get('Method') or row.get('method') or '').strip()
-                if name == method_name:
-                    metrics = {}
-                    for key in ('R2', 'MAE', 'RMSE', 'MB'):
-                        try:
-                            metrics[key] = float(row.get(key, 0))
-                        except (ValueError, TypeError):
-                            metrics[key] = 0.0
-                    if not registry.method_exists(method_name):
-                        registry.add_method(method_name)
-                    r2 = metrics.get('R2', 0) or 0
-                    from shared.method_registry import STATE_VERIFIED_PASS, STATE_VERIFIED_FAIL
-                    registry.update_state(method_name, STATE_VERIFIED_PASS if r2 > 0.8 else STATE_VERIFIED_FAIL)
-                    registry.update_metrics(method_name, metrics)
-                    registry.save()
-                    print(f"  [注册表] 已从 CSV 更新 {method_name}")
-                    return
+    # 没有 all_stages JSON，跳过（模板始终生成 JSON，CSV fallback 已废弃）
 
 
 def run_phase(phase_num, executor=None):

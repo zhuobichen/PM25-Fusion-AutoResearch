@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 EnhancedStackingEnsemble - Enhanced Stacking with More Base Models
 ===============================================================
 创新点:
@@ -66,7 +71,7 @@ def run_enhanced_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -276,6 +281,11 @@ def run_enhanced_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
     else:
         final_pred = best_weights[0] * rk_poly_all + best_weights[1] * rk_poly3_all + best_weights[2] * evna_all + best_weights[3] * avna_all
         final_metrics = compute_metrics(true_all, final_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = final_pred
+
         method_name = 'SimpleWeighted'
 
     print("\n" + "="*60)

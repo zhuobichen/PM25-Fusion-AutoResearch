@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 LB-GPR - Local Bandwidth Gaussian Process Regression
 ======================================================
 使用局部自适应带宽的GPR，根据邻域站点密度自适应调整核宽度
@@ -187,7 +192,7 @@ def run_lbgpr_ten_fold(selected_day='2020-01-01', ell_0=15.0, ell_min=5.0, ell_m
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -268,6 +273,11 @@ def run_lbgpr_ten_fold(selected_day='2020-01-01', ell_0=15.0, ell_min=5.0, ell_m
     print("\n=== Results ===")
     lbgpr_metrics = compute_metrics(true_all, lbgpr_all)
     gpr_metrics = compute_metrics(true_all, gpr_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = gpr_all
+
 
     print(f"  LB-GPR: R2={lbgpr_metrics['R2']:.4f}, MAE={lbgpr_metrics['MAE']:.2f}, RMSE={lbgpr_metrics['RMSE']:.2f}")
     print(f"  GPR:    R2={gpr_metrics['R2']:.4f}, MAE={gpr_metrics['MAE']:.2f}, RMSE={gpr_metrics['RMSE']:.2f}")

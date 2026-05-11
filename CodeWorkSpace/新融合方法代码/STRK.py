@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 STRK - Spatio-Temporal Residual Co-Kriging
 ==========================================
 时空残差共克里金融合方法
@@ -506,7 +511,7 @@ def cross_validate(method_func, fold_split_table, selected_days):
     for day in selected_days:
         print(f"\n--- Date: {day} ---")
         day_df = monitor_df[monitor_df['Date'] == day].copy()
-        day_df = day_df.merge(fold_df, on='Site', how='left')
+        day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
         day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
         date_obj = datetime.strptime(day, '%Y-%m-%d')
@@ -561,6 +566,11 @@ def run_strk_ten_fold(selected_day='2020-01-01'):
 def calculate_metrics(y_true, y_pred):
     """兼容接口"""
     return compute_metrics(y_true, y_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = y_true
+    _last_y_pred = y_pred
+
 
 
 if __name__ == '__main__':

@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 RobustRK - Robust Polynomial Residual Kriging
 =============================================
 使用Huber回归进行稳健的多项式残差克里金
@@ -63,7 +68,7 @@ def run_robust_rk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -162,6 +167,11 @@ def run_robust_rk_ten_fold(selected_day='2020-01-01'):
     print("\n=== Results ===")
     ols_metrics = compute_metrics(true_all, rk_ols_all)
     huber_metrics = compute_metrics(true_all, rk_huber_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = rk_huber_all
+
 
     print(f"  RK-OLS-Poly:  R2={ols_metrics['R2']:.4f}, MAE={ols_metrics['MAE']:.2f}, RMSE={ols_metrics['RMSE']:.2f}")
     print(f"  RK-Huber-Poly: R2={huber_metrics['R2']:.4f}, MAE={huber_metrics['MAE']:.2f}, RMSE={huber_metrics['RMSE']:.2f}")

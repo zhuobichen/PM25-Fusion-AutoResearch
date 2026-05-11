@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 CSP-RK - Concentration-Stratified PolyRK
 ==========================================
 把 CMAQ 数据按浓度分为高/中/低三层，分别拟合独立的多项式校正参数
@@ -288,7 +293,7 @@ def run_csprk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载 CMAQ 数据
@@ -380,6 +385,11 @@ def run_csprk_ten_fold(selected_day='2020-01-01'):
     print("\n=== Results ===")
     rk_metrics = compute_metrics(true_all, rk_poly_all)
     csprk_metrics = compute_metrics(true_all, csprk_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = csprk_all
+
 
     print(f"  RK-Poly:  R2={rk_metrics['R2']:.4f}, MAE={rk_metrics['MAE']:.2f}, RMSE={rk_metrics['RMSE']:.2f}")
     print(f"  CSP-RK:   R2={csprk_metrics['R2']:.4f}, MAE={csprk_metrics['MAE']:.2f}, RMSE={csprk_metrics['RMSE']:.2f}")

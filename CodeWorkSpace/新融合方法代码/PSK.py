@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 PSK - Polynomial Spline Kriging
 =================================
 使用三次样条函数替代二次多项式进行全局校正
@@ -72,7 +77,7 @@ def run_psk_ten_fold(selected_day='2020-01-01', spline_knots=5, spline_degree=3)
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -193,6 +198,11 @@ def run_psk_ten_fold(selected_day='2020-01-01', spline_knots=5, spline_degree=3)
     print("\n=== Results ===")
     poly_metrics = compute_metrics(true_all, rk_poly_all)
     spline_metrics = compute_metrics(true_all, rk_spline_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = rk_spline_all
+
 
     print(f"  RK_Poly:   R2={poly_metrics['R2']:.4f}, MAE={poly_metrics['MAE']:.2f}, RMSE={poly_metrics['RMSE']:.2f}, MB={poly_metrics['MB']:.2f}")
     print(f"  RK_Spline: R2={spline_metrics['R2']:.4f}, MAE={spline_metrics['MAE']:.2f}, RMSE={spline_metrics['RMSE']:.2f}, MB={spline_metrics['MB']:.2f}")

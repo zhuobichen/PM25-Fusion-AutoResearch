@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 PolyRK - Polynomial Residual Kriging
 =====================================
 使用多项式OLS进行模型偏差校正，然后进行残差克里金
@@ -67,7 +72,7 @@ def run_poly_rk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -165,6 +170,11 @@ def run_poly_rk_ten_fold(selected_day='2020-01-01'):
     print("\n=== Results ===")
     linear_metrics = compute_metrics(true_all, rk_linear_all)
     poly_metrics = compute_metrics(true_all, rk_poly_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = rk_poly_all
+
 
     print(f"  RK-Linear: R2={linear_metrics['R2']:.4f}, MAE={linear_metrics['MAE']:.2f}, RMSE={linear_metrics['RMSE']:.2f}")
     print(f"  RK-Poly:   R2={poly_metrics['R2']:.4f}, MAE={poly_metrics['MAE']:.2f}, RMSE={poly_metrics['RMSE']:.2f}")

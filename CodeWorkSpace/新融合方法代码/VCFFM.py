@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 VCFFM - 变分协方差场融合模型
 ============================
 Variational Covariance Field Fusion Model
@@ -374,7 +379,7 @@ def run_vcffm_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     ds = nc.Dataset(cmaq_file, 'r')
@@ -430,6 +435,11 @@ def run_vcffm_ten_fold(selected_day='2020-01-01'):
     y_true_all = np.concatenate([results[f]['y_true'] for f in range(1, 11) if results[f]])
     y_pred_all = np.concatenate([results[f]['y_pred'] for f in range(1, 11) if results[f]])
     final_metrics = compute_metrics(y_true_all, y_pred_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = y_true_all
+    _last_y_pred = y_pred_all
+
 
     print("\n" + "="*60)
     print("Final VCFFM Results")

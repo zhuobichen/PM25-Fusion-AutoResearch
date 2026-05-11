@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 SPIN-Kr - 图核时空克里金法
 Spatiotemporal Physics-Informed Graph Kernel Kriging
 ======================================================
@@ -195,7 +200,7 @@ def run_spin_kr_ten_fold(selected_day='2020-01-01', **kwargs):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -258,6 +263,11 @@ def run_spin_kr_ten_fold(selected_day='2020-01-01', **kwargs):
     # 计算R2
     print("\n=== Results ===")
     metrics = compute_metrics(true_all, pred_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = pred_all
+
 
     print(f"  SPIN-Kr: R2={metrics['R2']:.4f}, MAE={metrics['MAE']:.2f}, RMSE={metrics['RMSE']:.2f}")
 

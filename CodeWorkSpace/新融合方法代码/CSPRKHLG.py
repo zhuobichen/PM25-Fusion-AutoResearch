@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 CSP-RK-HLG - Hybrid Layer GPR
 ===============================
 CSP-RK with Matern kernel and hybrid global + hierarchical GPR strategy
@@ -279,7 +284,7 @@ def run_csprkhlg_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载 CMAQ 数据
@@ -365,6 +370,11 @@ def run_csprkhlg_ten_fold(selected_day='2020-01-01'):
     csprkhlg_metrics = compute_metrics(true_all, csprkhlg_all)
     csprkhlg_nh_metrics = compute_metrics(true_all, csprkhlg_nh_all)
     csprkhlg_rbf_metrics = compute_metrics(true_all, csprkhlg_rbf_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = csprkhlg_rbf_all
+
 
     print(f"  CSP-RK-HLG (Matern+Hybrid): R2={csprkhlg_metrics['R2']:.4f}, MAE={csprkhlg_metrics['MAE']:.2f}, RMSE={csprkhlg_metrics['RMSE']:.2f}")
     print(f"  CSP-RK-HLG (Matern):        R2={csprkhlg_nh_metrics['R2']:.4f}, MAE={csprkhlg_nh_metrics['MAE']:.2f}, RMSE={csprkhlg_nh_metrics['RMSE']:.2f}")

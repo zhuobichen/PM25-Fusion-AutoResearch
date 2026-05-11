@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 HGP-RK - Heteroscedastic GPR PolyRK
 =====================================
 GPR 残差建模使用异方差（不同浓度区域不同方差权重）
@@ -249,7 +254,7 @@ def run_hgprk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载 CMAQ 数据
@@ -345,6 +350,11 @@ def run_hgprk_ten_fold(selected_day='2020-01-01'):
     print("\n=== Results ===")
     rk_homo_metrics = compute_metrics(true_all, rk_homo_all)
     hgprk_metrics = compute_metrics(true_all, hgprk_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = hgprk_all
+
 
     print(f"  RK-Homo:  R2={rk_homo_metrics['R2']:.4f}, MAE={rk_homo_metrics['MAE']:.2f}, RMSE={rk_homo_metrics['RMSE']:.2f}")
     print(f"  HGP-RK:   R2={hgprk_metrics['R2']:.4f}, MAE={hgprk_metrics['MAE']:.2f}, RMSE={hgprk_metrics['RMSE']:.2f}")

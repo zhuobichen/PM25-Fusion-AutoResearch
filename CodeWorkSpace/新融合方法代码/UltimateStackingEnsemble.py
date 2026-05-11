@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 UltimateStackingEnsemble - Ultimate Stacking with All Base Models
 ================================================================
 创新点:
@@ -66,7 +71,7 @@ def run_ultimate_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -268,7 +273,12 @@ def run_ultimate_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
             meta_en = ElasticNet(l1_ratio=l1_ratio, alpha=alpha, max_iter=5000)
             meta_en.fit(X_meta_5, oof_true)
             en_pred = meta_en.predict(X_meta_5)
-            en_r2 = compute_metrics(oof_true, en_pred)['R2']
+            en_r2 = compute_metrics(oof_true, en_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = oof_true
+    _last_y_pred = en_pred
+['R2']
             if en_r2 > best_en_r2:
                 best_en_r2 = en_r2
                 best_l1_ratio = l1_ratio

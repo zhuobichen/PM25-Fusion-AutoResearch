@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 CGARK - CMAQ Gradient Anisotropic Residual Kriging
 ====================================================
 利用CMAQ梯度引导各向异性GPR进行残差克里金插值
@@ -208,7 +213,7 @@ def run_cgark_ten_fold(selected_day='2020-01-01', lambda_along=25.0, lambda_acro
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -306,6 +311,11 @@ def run_cgark_ten_fold(selected_day='2020-01-01', lambda_along=25.0, lambda_acro
     print("\n=== Results ===")
     cgark_metrics = compute_metrics(true_all, cgark_all)
     rk_metrics = compute_metrics(true_all, rk_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = rk_all
+
 
     print(f"  CGARK: R2={cgark_metrics['R2']:.4f}, MAE={cgark_metrics['MAE']:.2f}, RMSE={cgark_metrics['RMSE']:.2f}, MB={cgark_metrics['MB']:.2f}")
     print(f"  RK:    R2={rk_metrics['R2']:.4f}, MAE={rk_metrics['MAE']:.2f}, RMSE={rk_metrics['RMSE']:.2f}, MB={rk_metrics['MB']:.2f}")

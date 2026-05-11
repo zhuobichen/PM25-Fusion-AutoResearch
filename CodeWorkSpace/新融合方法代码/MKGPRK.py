@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 MKGPR-RK - Multi-Kernel GPR PolyRK
 ===================================
 GPR 使用多核（RBF短程 + RBF中程 + WhiteKernel）
@@ -185,7 +190,7 @@ def run_mkgprk_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载 CMAQ 数据
@@ -281,6 +286,11 @@ def run_mkgprk_ten_fold(selected_day='2020-01-01'):
     print("\n=== Results ===")
     rk_single_metrics = compute_metrics(true_all, rk_single_all)
     mkgprk_metrics = compute_metrics(true_all, mkgprk_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = mkgprk_all
+
 
     print(f"  RK-Single: R2={rk_single_metrics['R2']:.4f}, MAE={rk_single_metrics['MAE']:.2f}, RMSE={rk_single_metrics['RMSE']:.2f}")
     print(f"  MKGPR-RK:  R2={mkgprk_metrics['R2']:.4f}, MAE={mkgprk_metrics['MAE']:.2f}, RMSE={mkgprk_metrics['RMSE']:.2f}")

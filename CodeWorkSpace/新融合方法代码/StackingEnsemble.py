@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 StackingEnsemble - Stacking Ensemble with Meta-Learner
 ====================================================
 创新点:
@@ -66,7 +71,7 @@ def run_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -237,6 +242,11 @@ def run_stacking_ensemble_ten_fold(selected_day='2020-01-01'):
 
     # 比较Stacking和Simple Ensemble
     stacking_metrics = compute_metrics(oof_true, meta_pred)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = oof_true
+    _last_y_pred = meta_pred
+
 
     # 选择更好的方法
     if stacking_metrics['R2'] > best_r2:

@@ -1,346 +1,231 @@
 # -*- coding: utf-8 -*-
 """
-GARK 十折交叉验证 - 标准模式
-============================
-Gradient Anisotropic Residual Kriging
+GARK 十折交叉验证（标准模式）
+=====================================
+自动生成时间: 2026-05-11T09:30:28.578402
 
-按照十折交叉验证架构文档：
-- 训练：9折监测站的CMAQ网格坐标 + 梯度方向
-- 预测：对1折站点所在的CMAQ网格坐标预测
-
-创新点:
-1. CMAQ 梯度引导的各向异性克里金
-2. 沿梯度方向和垂直梯度方向使用不同相关长度
-3. 固定参数 (a_min=8.0km, a_max=20.0km, alpha=2.0)
-
-参数 (固定，不学习):
-- a_min: 8.0 (km) - 垂直梯度方向相关长度
-- a_max: 20.0 (km) - 沿梯度方向相关长度
-- alpha: 2.0 - 各向异性指数
-- n_neighbor: 12
+验证流程对齐设计文档《十折交叉验证架构文档.md》9.4：
+- pre_exp 主级未通过且 R² ≤ 基线 -> 停止
+- pre_exp 次级创新（R² 达标） -> 继续 stage1
+- stage1  主级未通过且 R² ≤ 基线 -> 停止，标记 seasonally_limited
+- stage1  次级创新（R² 达标） -> 继续 stage2
+- stage2  失败 -> 继续（不阻止 stage3）
+- stage3  主级创新（三条件全满足） -> fully_established
+- stage3  次级创新（R2 > 基线，其余未达标） -> secondary_innovation
+- stage3  未通过 -> partially_established
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
-from shared.paths import get_project_root, data_path
+import sys
 import json
+import importlib
 import numpy as np
 import pandas as pd
-import netCDF4 as nc
 from datetime import datetime, timedelta
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
-from joblib import Parallel, delayed
 
-ROOT_DIR = str(get_project_root())
-CMAQ_FILE = data_path('test_data/raw/CMAQ/2020_PM25.nc')
-MONITOR_FILE = data_path('test_data/raw/Monitor/2020_DailyPM2.5Monitor.csv')
-FOLD_FILE = data_path('test_data/fold_split_table_daily.csv')
-OUTPUT_FILE = f'{ROOT_DIR}/Innovation/success/GARK/GARK_all_stages.json'
+# 路径设置
+PROJECT_ROOT = r'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch'
+sys.path.insert(0, PROJECT_ROOT)
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'Code', 'Downscaler'))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'Code'))
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'CodeWorkSpace', '新融合方法代码'))
 
-# VNA baseline
-BASELINE = {
-    'pre_exp': {'R2': 0.8907, 'RMSE': 16.68, 'MB': 0.70},
-    'stage1':  {'R2': 0.9034, 'RMSE': 16.48, 'MB': 0.50},
-    'stage2':  {'R2': 0.8408, 'RMSE': 5.05, 'MB': 0.05},
-    'stage3':  {'R2': 0.9031, 'RMSE': 12.20, 'MB': 0.42},
-}
+from shared.paths import data_path
+from shared.metrics import compute_metrics
 
-STAGES = {
-    'pre_exp': ('2020-01-01', '2020-01-05'),
-    'stage1':  ('2020-01-01', '2020-01-31'),
-    'stage2':  ('2020-07-01', '2020-07-31'),
-    'stage3':  ('2020-12-01', '2020-12-31'),
-}
-
-# GARK parameters (fixed)
-A_MIN = 8.0  # km, perpendicular to gradient
-A_MAX = 20.0  # km, along gradient
-ALPHA = 2.0
-N_NEIGHBOR = 12
+METHOD_NAME = 'GARK'
 
 
-def compute_metrics(y_true, y_pred):
-    mask = ~(np.isnan(y_true) | np.isnan(y_pred) | np.isinf(y_true) | np.isinf(y_pred))
-    y_true = y_true[mask]
-    y_pred = y_pred[mask]
-    if len(y_true) == 0:
-        return {'R2': np.nan, 'MAE': np.nan, 'RMSE': np.nan, 'MB': np.nan}
-    return {
-        'R2': float(r2_score(y_true, y_pred)),
-        'MAE': float(mean_absolute_error(y_true, y_pred)),
-        'RMSE': float(np.sqrt(mean_squared_error(y_true, y_pred))),
-        'MB': float(np.mean(y_pred - y_true))
-    }
+def _find_run_ten_fold():
+    """查找方法模块中的 run_*_ten_fold 函数。"""
+    mod = importlib.import_module(METHOD_NAME)
+    for name in dir(mod):
+        if name.startswith('run_') and name.endswith('_ten_fold') and callable(getattr(mod, name)):
+            return getattr(mod, name)
+    return None
 
 
-def get_cmaq_at_site(lon, lat, lon_grid, lat_grid, pm25_grid):
-    dist = np.sqrt((lon_grid - lon)**2 + (lat_grid - lat)**2)
-    idx = np.argmin(dist)
-    ny, nx = lon_grid.shape
-    row, col = idx // nx, idx % nx
-    return pm25_grid[row, col]
+def _get_cached_predictions():
+    """从方法模块中读取缓存的预测值。"""
+    mod = importlib.import_module(METHOD_NAME)
+    y_true = getattr(mod, '_last_y_true', None)
+    y_pred = getattr(mod, '_last_y_pred', None)
+    return y_true, y_pred
 
 
-def compute_gradient_direction(lon, lat, lon_grid, lat_grid, pm25_grid):
-    """计算CMAQ梯度方向"""
-    dist = np.sqrt((lon_grid - lon)**2 + (lat_grid - lat)**2)
-    idx = np.argmin(dist)
-    ny, nx = lon_grid.shape
-    row, col = idx // nx, idx % nx
-
-    row = np.clip(row, 1, ny - 2)
-    col = np.clip(col, 1, nx - 2)
-
-    pm_xp = pm25_grid[row, min(col + 1, nx - 1)]
-    pm_xm = pm25_grid[row, max(col - 1, 0)]
-    pm_yp = pm25_grid[min(row + 1, ny - 1), col]
-    pm_ym = pm25_grid[max(row - 1, 0), col]
-
-    lon_step = np.mean(np.diff(lon_grid, axis=1))
-    lat_step = np.mean(np.diff(lat_grid, axis=0))
-
-    dpm_dlon = (pm_xp - pm_xm) / (2 * lon_step) if lon_step != 0 else 0
-    dpm_dlat = (pm_yp - pm_ym) / (2 * lat_step) if lat_step != 0 else 0
-
-    gradient_magnitude = np.sqrt(dpm_dlon**2 + dpm_dlat**2)
-    gradient_direction = np.arctan2(dpm_dlon, dpm_dlat)
-
-    return gradient_magnitude, gradient_direction
-
-
-def anisotropic_distance(x1, x2, direction, a_min, a_max, alpha=2.0):
-    """计算各向异性距离"""
-    dx = x1[0] - x2[0]
-    dy = x1[1] - x2[1]
-
-    cos_d = np.cos(direction)
-    sin_d = np.sin(direction)
-
-    d_along = dx * cos_d + dy * sin_d
-    d_perp = -dx * sin_d + dy * cos_d
-
-    dist = np.sqrt((d_along / a_max)**2 + (d_perp / a_min)**2)
-
-    return dist
-
-
-def gark_predict_vectorized(x_obs, residual_obs, x_pred, direction_pred, a_min=8.0, a_max=20.0, alpha=2.0, n_neighbor=12):
-    """GARK预测 - 向量化版本"""
-    n_pred = x_pred.shape[0]
-    n_obs = x_obs.shape[0]
-
-    # 广播：x_pred[:, np.newaxis, :] - x_obs[np.newaxis, :, :]
-    # 结果形状 (n_pred, n_obs, 2)
-    diff = x_pred[:, np.newaxis, :] - x_obs[np.newaxis, :, :]
-
-    # 测试点梯度方向
-    cos_d = np.cos(direction_pred)[:, np.newaxis]  # (n_pred, 1)
-    sin_d = np.sin(direction_pred)[:, np.newaxis]  # (n_pred, 1)
-
-    # 旋转到梯度主轴坐标系
-    d_along = diff[:, :, 0] * cos_d + diff[:, :, 1] * sin_d  # (n_pred, n_obs)
-    d_perp = -diff[:, :, 0] * sin_d + diff[:, :, 1] * cos_d  # (n_pred, n_obs)
-
-    # 各向异性距离
-    dist_aniso = np.sqrt((d_along / a_max)**2 + (d_perp / a_min)**2)  # (n_pred, n_obs)
-
-    # 对每个预测点，选择最近的邻居
-    if n_neighbor < n_obs:
-        # argpartition 更高效地选择前 n_neighbor 个
-        idx = np.argpartition(dist_aniso, n_neighbor, axis=1)[:, :n_neighbor]  # (n_pred, n_neighbor)
-        # 获取这些索引对应的距离和残差值
-        row_idx = np.arange(n_pred)[:, np.newaxis]  # (n_pred, 1)
-        dists_k = dist_aniso[row_idx, idx]  # (n_pred, n_neighbor)
-        values_k = residual_obs[idx]  # (n_pred, n_neighbor)
-    else:
-        dists_k = dist_aniso
-        values_k = np.tile(residual_obs, (n_pred, 1))
-
-    # 避免除零
-    dists_k = np.maximum(dists_k, 1e-10)
-
-    # 高斯核权重
-    sigma = a_min / 3.0
-    weights = np.exp(-0.5 * (dists_k / sigma)**2)  # (n_pred, n_neighbor)
-    weights = weights / weights.sum(axis=1, keepdims=True)  # 归一化
-
-    # 加权平均
-    pred_values = np.sum(weights * values_k, axis=1)  # (n_pred,)
-
-    return pred_values
-
-
-def gark_predict(x_obs, residual_obs, x_pred, direction_pred, a_min=8.0, a_max=20.0, alpha=2.0, n_neighbor=12):
-    """GARK预测 - 调用向量化版本"""
-    return gark_predict_vectorized(x_obs, residual_obs, x_pred, direction_pred, a_min, a_max, alpha, n_neighbor)
-
-
-def ten_fold_gark(selected_day):
-    """GARK 十折验证 - 标准模式"""
-    monitor_df = pd.read_csv(MONITOR_FILE)
-    fold_df = pd.read_csv(FOLD_FILE)
-
-    day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
-    day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
-
-    if len(day_df) < 100:
-        return np.array([]), np.array([])
-
-    ds = nc.Dataset(CMAQ_FILE, 'r')
-    lon_cmaq = ds.variables['lon'][:]
-    lat_cmaq = ds.variables['lat'][:]
-    pred_pm25 = ds.variables['pred_PM25'][:]
-    ds.close()
-
-    date_obj = datetime.strptime(selected_day, '%Y-%m-%d')
-    day_idx = (date_obj - datetime(2020, 1, 1)).days
-    if day_idx >= pred_pm25.shape[0]:
-        return np.array([]), np.array([])
-    cmaq_day = pred_pm25[day_idx]
-
-    # 获取CMAQ值和梯度方向
-    cmaq_values = []
-    grad_dirs = []
-    for _, row in day_df.iterrows():
-        val = get_cmaq_at_site(row['Lon'], row['Lat'], lon_cmaq, lat_cmaq, cmaq_day)
-        _, direction = compute_gradient_direction(row['Lon'], row['Lat'], lon_cmaq, lat_cmaq, cmaq_day)
-        cmaq_values.append(val)
-        grad_dirs.append(direction)
-    day_df['CMAQ'] = cmaq_values
-    day_df['gradient_direction'] = grad_dirs
+def run_stage_agg(start_date, end_date):
+    """多天聚合验证：遍历日期范围，每天调用方法的 ten_fold 函数，合并预测值。"""
+    func = _find_run_ten_fold()
+    if func is None:
+        print(f"  无法找到 {METHOD_NAME} 中的 run_*_ten_fold 函数")
+        return None
 
     all_y_true = []
     all_y_pred = []
+    current = datetime.strptime(start_date, '%Y-%m-%d')
+    end = datetime.strptime(end_date, '%Y-%m-%d')
+    days_run = 0
 
-    for fold_id in range(1, 11):
-        train_df = day_df[day_df['fold'] != fold_id].copy()
-        test_df = day_df[day_df['fold'] == fold_id].copy()
+    while current <= end:
+        day_str = current.strftime('%Y-%m-%d')
+        try:
+            func(day_str)
+            yt, yp = _get_cached_predictions()
+            if yt is not None and yp is not None and len(yt) > 0:
+                all_y_true.extend(yt)
+                all_y_pred.extend(yp)
+                days_run += 1
+        except Exception as e:
+            print(f"  {day_str} 异常: {e}")
+        current += timedelta(days=1)
 
-        train_df = train_df.dropna(subset=['Lon', 'Lat', 'CMAQ', 'Conc', 'gradient_direction'])
-        test_df = test_df.dropna(subset=['Lon', 'Lat', 'CMAQ', 'Conc', 'gradient_direction'])
-
-        if len(test_df) == 0 or len(train_df) == 0:
-            continue
-
-        X_train = train_df[['Lon', 'Lat']].values
-        X_test = test_df[['Lon', 'Lat']].values
-        residual_train = train_df['Conc'].values - train_df['CMAQ'].values
-        direction_train = train_df['gradient_direction'].values
-        direction_test = test_df['gradient_direction'].values
-        y_test = test_df['Conc'].values
-        cmaq_test = test_df['CMAQ'].values
-
-        # GARK预测
-        gark_residual_pred = gark_predict(
-            X_train, residual_train, X_test, direction_test,
-            A_MIN, A_MAX, ALPHA, N_NEIGHBOR
-        )
-
-        # 融合预测
-        gark_pred = cmaq_test + gark_residual_pred
-
-        all_y_true.extend(y_test)
-        all_y_pred.extend(gark_pred)
-
-    return np.array(all_y_true), np.array(all_y_pred)
-
-
-def run_stage_validation(stage_name, start_date, end_date):
-    sep = "=" * 70
-    print(sep)
-    print(f"GARK Stage: {stage_name} ({start_date} ~ {end_date})")
-    print(f"Parameters: a_min={A_MIN}, a_max={A_MAX}, alpha={ALPHA}, n_neighbor={N_NEIGHBOR}")
-    print(sep)
-
-    base = BASELINE[stage_name]
-    threshold_r2 = base['R2']
-    print(f"VNA Baseline: R2={base['R2']:.4f}, RMSE={base['RMSE']:.2f}, MB={base['MB']:.2f}")
-
-    date_list = []
-    current_date = datetime.strptime(start_date, '%Y-%m-%d')
-    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
-    while current_date <= end_date_obj:
-        date_list.append(current_date.strftime('%Y-%m-%d'))
-        current_date += timedelta(days=1)
-
-    print(f"Days: {len(date_list)}")
-
-    # 并行处理
-    n_jobs = min(8, len(date_list))
-    results = Parallel(n_jobs=n_jobs)(
-        delayed(ten_fold_gark)(date_str)
-        for date_str in date_list
-    )
-
-    all_y_true = []
-    all_y_pred = []
-    day_count = 0
-    for y_true, y_pred in results:
-        if len(y_true) > 0:
-            all_y_true.extend(y_true)
-            all_y_pred.extend(y_pred)
-            day_count += 1
-
-    print(f"Processed: {day_count} days, {len(all_y_true)} predictions")
-
-    if len(all_y_true) == 0:
-        return {'R2': np.nan, 'MAE': np.nan, 'RMSE': np.nan, 'MB': np.nan}, False
+    if not all_y_true:
+        return None
 
     metrics = compute_metrics(np.array(all_y_true), np.array(all_y_pred))
-
-    r2_pass = metrics['R2'] > threshold_r2
-    rmse_pass = metrics['RMSE'] <= base['RMSE']
-    mb_pass = abs(metrics['MB']) <= abs(base['MB'])
-    innovation_pass = r2_pass and rmse_pass and mb_pass
-
-    print(f"Result: R2={metrics['R2']:.4f}, RMSE={metrics['RMSE']:.2f}, MAE={metrics['MAE']:.2f}, MB={metrics['MB']:.2f}")
-    r2_str = "PASS" if r2_pass else "FAIL"
-    rmse_str = "PASS" if rmse_pass else "FAIL"
-    mb_str = "PASS" if mb_pass else "FAIL"
-    innov_str = "VERIFIED" if innovation_pass else "NOT VERIFIED"
-    print(f"Check: R2>{threshold_r2:.4f}? {r2_str} | RMSE<={base['RMSE']}? {rmse_str} | |MB|<={abs(base['MB'])}? {mb_str}")
-    print(f"Innovation: {innov_str}")
-
-    return metrics, innovation_pass
+    metrics['days_run'] = days_run
+    return metrics
 
 
-def main():
-    sep = "=" * 70
-    print(sep)
-    print("GARK All Stages - Gradient Anisotropic Residual Kriging")
-    print(sep)
+def run_multistage():
+    """运行多阶段验证（对齐设计文档 9.4 分阶段执行流程）。"""
+    # VNA 基线阈值（来自十折交叉验证架构文档 9.2）
+    BASELINE = {
+        'pre_exp': {'R2': 0.8941, 'RMSE': 16.42, 'MB': 0.76},
+        'stage1':  {'R2': 0.9057, 'RMSE': 16.28, 'MB': 0.50},
+        'stage2':  {'R2': 0.8458, 'RMSE': 4.97,  'MB': 0.04},
+        'stage3':  {'R2': 0.9078, 'RMSE': 11.90, 'MB': 0.36},
+    }
+
+    # 验证阶段定义（对齐设计文档 9.1）
+    STAGES = {
+        'pre_exp': ('2020-01-01', '2020-01-05'),
+        'stage1':  ('2020-01-01', '2020-01-31'),
+        'stage2':  ('2020-07-01', '2020-07-31'),
+        'stage3':  ('2020-12-01', '2020-12-31'),
+    }
 
     results = {}
-    all_pass = True
+    outcome = 'unknown'
 
     for stage_name, (start, end) in STAGES.items():
-        metrics, innovation_pass = run_stage_validation(stage_name, start, end)
-        results[stage_name] = {'metrics': metrics, '判定': {'innovation_verified': innovation_pass}}
-        if not innovation_pass:
-            all_pass = False
+        print(f"\n--- {stage_name} ({start} ~ {end}) ---")
+        metrics = run_stage_agg(start, end)
 
-    # 保存结果
-    os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
+        if metrics:
+            baseline = BASELINE[stage_name]
+            r2_pass = metrics['R2'] > baseline['R2'] + 0.01
+            r2_above_baseline = metrics['R2'] > baseline['R2']
+            rmse_pass = metrics['RMSE'] <= baseline['RMSE']
+            mb_pass = abs(metrics['MB']) <= abs(baseline['MB'])
+            innovation_pass = r2_pass and rmse_pass and mb_pass
 
-    print(sep)
-    print("SUMMARY")
-    print(sep)
-    for stage, data in results.items():
-        m = data['metrics']
-        status = 'VERIFIED' if data['判定']['innovation_verified'] else 'NOT VERIFIED'
-        print(f"{stage}: R2={m['R2']:.4f}, RMSE={m['RMSE']:.2f}, MB={m['MB']:.2f} -> {status}")
+            results[stage_name] = {
+                'metrics': {k: v for k, v in metrics.items() if k != 'days_run'},
+                'days_run': metrics.get('days_run', 0),
+                'innovation_pass': innovation_pass
+            }
 
-    print(f"\nAll stages passed: {all_pass}")
-    print(f"Results saved: {OUTPUT_FILE}")
+            print(f"  R2={metrics['R2']:.4f} (阈值>{baseline['R2'] + 0.01:.4f}) {'PASS' if r2_pass else 'FAIL'}")
+            print(f"  RMSE={metrics['RMSE']:.2f} (阈值<={baseline['RMSE']:.2f}) {'PASS' if rmse_pass else 'FAIL'}")
+            print(f"  |MB|={abs(metrics['MB']):.2f} (阈值<={abs(baseline['MB']):.2f}) {'PASS' if mb_pass else 'FAIL'}")
 
+            # 对齐设计文档 9.4 分阶段执行流程
+            # pre_exp: R² ≤ 基线 -> 停止
+            if stage_name == 'pre_exp' and not innovation_pass and not r2_above_baseline:
+                outcome = 'failed'
+                print(f"\n  [停止] pre_exp 未通过 -> outcome={outcome}")
+                break
+            if stage_name == 'pre_exp' and not innovation_pass and r2_above_baseline:
+                print(f"\n  [继续] pre_exp 次级创新（R2 达标）-> 继续 stage1")
+            # stage1: R² ≤ 基线 -> 停止
+            if stage_name == 'stage1' and not innovation_pass and not r2_above_baseline:
+                outcome = 'seasonally_limited'
+                print(f"\n  [停止] stage1 未通过 -> outcome={outcome}")
+                break
+            if stage_name == 'stage1' and not innovation_pass and r2_above_baseline:
+                print(f"\n  [继续] stage1 次级创新（R2 达标）-> 继续 stage2")
+            # stage2 失败不阻止 stage3
+            if stage_name == 'stage3':
+                if innovation_pass:
+                    outcome = 'fully_established'
+                elif r2_above_baseline:
+                    # 次级创新：R² > 基线，但 RMSE 或 MB 未达标
+                    outcome = 'secondary_innovation'
+                else:
+                    outcome = 'partially_established'
+                print(f"\n  [完成] stage3 -> outcome={outcome}")
+        else:
+            results[stage_name] = {
+                'metrics': None,
+                'days_run': 0,
+                'innovation_pass': False
+            }
+            if stage_name == 'pre_exp':
+                outcome = 'failed'
+                print(f"\n  [停止] pre_exp 无数据 -> outcome={outcome}")
+                break
+            if stage_name == 'stage1':
+                outcome = 'seasonally_limited'
+                print(f"\n  [停止] stage1 无数据 -> outcome={outcome}")
+                break
+            if stage_name == 'stage3':
+                outcome = 'partially_established'
+                print(f"\n  [完成] stage3 无数据 -> outcome={outcome}")
+
+    results['outcome'] = outcome
     return results
 
 
 if __name__ == '__main__':
-    main()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pre-only', action='store_true', help='只运行 pre_exp 第一天预验证')
+    args = parser.parse_args()
+
+    if args.pre_only:
+        # 快速预验证：只跑 pre_exp 第一天（2020-01-01）
+        print(f"\n=== {METHOD_NAME} 预验证 (pre_exp day1) ===")
+        func = _find_run_ten_fold()
+        if func:
+            func('2020-01-01')
+            yt, yp = _get_cached_predictions()
+            if yt is not None and yp is not None and len(yt) > 0:
+                metrics = compute_metrics(np.array(yt), np.array(yp))
+                baseline = {'R2': 0.8941, 'RMSE': 16.42, 'MB': 0.76}
+                r2_pass = metrics['R2'] > baseline['R2'] + 0.01
+                rmse_pass = metrics['RMSE'] <= baseline['RMSE']
+                mb_pass = abs(metrics['MB']) <= abs(baseline['MB'])
+                passed = r2_pass and rmse_pass and mb_pass
+                print(f"  预验证{'通过' if passed else '失败'}: R2={metrics['R2']:.4f}")
+                pre_path = os.path.join(PROJECT_ROOT, 'test_result', '创新方法', f'{METHOD_NAME}_pre_exp.json')
+                with open(pre_path, 'w', encoding='utf-8') as f:
+                    json.dump({'passed': passed, 'metrics': metrics}, f, indent=2)
+            else:
+                print("  预验证失败: 无数据")
+        else:
+            print("  无法找到 run_*_ten_fold 函数")
+    else:
+        # 运行完整多阶段验证
+        results = run_multistage()
+
+        # 保存结果
+        output_dir = os.path.join(PROJECT_ROOT, 'test_result', '创新方法')
+        os.makedirs(output_dir, exist_ok=True)
+
+        json_path = os.path.join(output_dir, f'{METHOD_NAME}_all_stages.json')
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        print(f"\n结果已保存: {json_path}")
+
+        csv_path = os.path.join(output_dir, f'{METHOD_NAME}_summary.csv')
+        with open(csv_path, 'w', encoding='utf-8') as f:
+            f.write('Method,Stage,R2,MAE,RMSE,MB,DaysRun,Pass\n')
+            for stage_name, stage_data in results.items():
+                if stage_name == 'outcome':
+                    continue
+                m = stage_data.get('metrics')
+                if m:
+                    f.write(f'{METHOD_NAME},{stage_name},{m["R2"]},{m["MAE"]},{m["RMSE"]},{m["MB"]},{stage_data.get("days_run",0)},{stage_data.get("innovation_pass",False)}\n')
+            f.write(f'{METHOD_NAME},outcome,,,,,,{results["outcome"]}\n')
+        print(f"结果已保存: {csv_path}")

@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 SQDM - Spatial Quantile Deviation Mapping
 ==========================================
 空间分位数偏差映射，捕捉"同一CMAQ值在不同位置偏差不同"
@@ -219,7 +224,7 @@ def run_sqdm_ten_fold(selected_day='2020-01-01', n_neighbor=12, gamma=0.1, alpha
     fold_df = pd.read_csv(fold_file)
 
     day_df = monitor_df[monitor_df['Date'] == selected_day].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 加载CMAQ数据
@@ -301,6 +306,11 @@ def run_sqdm_ten_fold(selected_day='2020-01-01', n_neighbor=12, gamma=0.1, alpha
     print("\n=== Results ===")
     sqdm_metrics = compute_metrics(true_all, sqdm_all)
     gpr_metrics = compute_metrics(true_all, gpr_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = gpr_all
+
 
     print(f"  SQDM: R2={sqdm_metrics['R2']:.4f}, MAE={sqdm_metrics['MAE']:.2f}, RMSE={sqdm_metrics['RMSE']:.2f}")
     print(f"  GPR:  R2={gpr_metrics['R2']:.4f}, MAE={gpr_metrics['MAE']:.2f}, RMSE={gpr_metrics['RMSE']:.2f}")

@@ -1,4 +1,9 @@
 """
+
+# === 预测值缓存（由 patch_methods.py 自动添加）===
+_last_y_true = None
+_last_y_pred = None
+
 ST-CRK: Spatiotemporal Cokriging Residual Kriging
 ===================================================
 时空协同残差克里金融合方法
@@ -430,7 +435,7 @@ def run_stcrk_ten_fold(start_date_str='2020-01-01', num_days=5,
 
     # 使用第一天进行十折验证（与其他方法公平对比）
     day_df = monitor_df[monitor_df['Date'] == start_date_str].copy()
-    day_df = day_df.merge(fold_df, on='Site', how='left')
+    day_df = day_df.merge(fold_df, on=['Date', 'Site'], how='left')
     day_df = day_df.dropna(subset=['Lat', 'Lon', 'Conc'])
 
     # 提取CMAQ值
@@ -522,7 +527,7 @@ def run_stcrk_ten_fold(start_date_str='2020-01-01', num_days=5,
             multi_day_train = []
             for date_str in dates_used[:num_days]:
                 day_train = monitor_df[monitor_df['Date'] == date_str].copy()
-                day_train = day_train.merge(fold_df, on='Site', how='left')
+                day_train = day_train.merge(fold_df, on=['Date', 'Site'], how='left')
                 day_train = day_train.dropna(subset=['Lat', 'Lon', 'Conc'])
                 if len(day_train) > 0 and date_str in cmaq_grids:
                     cmaq_vals = []
@@ -601,6 +606,11 @@ def run_stcrk_ten_fold(start_date_str='2020-01-01', num_days=5,
 
     stcrk_all = np.concatenate([results[f]['stcrk'] for f in range(1, 11) if results[f]])
     stcrk_metrics = compute_metrics(true_all, stcrk_all)
+    # 缓存预测值供多天聚合使用
+    global _last_y_true, _last_y_pred
+    _last_y_true = true_all
+    _last_y_pred = stcrk_all
+
     metrics_summary.append(('ST-CRK', stcrk_metrics))
     print(f"  ST-CRK:   R2={stcrk_metrics['R2']:.4f}, MAE={stcrk_metrics['MAE']:.2f}, RMSE={stcrk_metrics['RMSE']:.2f}")
 
