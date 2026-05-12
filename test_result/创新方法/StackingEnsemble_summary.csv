@@ -1,2 +1,2 @@
-method,best_submethod,R2,MAE,RMSE,MB,R2_threshold,RMSE_threshold,MB_threshold,R2_pass,RMSE_pass,MB_pass,innovation_verified
-StackingEnsemble,Stacking,0.8552122336956927,6.986877393609065,10.92636828434586,5.144966307954787e-15,0.8200000000000001,12.5159,0.0774,True,True,True,True
+method,best_submethod,R2,MAE,RMSE,MB
+StackingEnsemble,Stacking,0.8461500578012532,7.0967079847523795,11.26311632216092,-2.583429890802829e-13

@@ -64,6 +64,22 @@ $$
 | learning_rate | float | - | 学习率 |
 | batch_size | int | - | 批大小 |
 
+## 数据规格
+
+### 输入
+| 数据 | 格式 | 维度 | 单位 |
+|-----|------|-----|------|
+| 监测站点PM2.5 | array | (n_stations,) | μg/m³ |
+| 气象特征（温度、风速、降水等） | array | (n_stations, n_meteo) | - |
+| 排放清单（NOx、SO2等） | array | (n_stations, n_emiss) | - |
+| 站点坐标 | array | (n_stations, 2) | 度 |
+| 卫星AOD（梯度约束用） | array | (n_grids, n_times) | - |
+
+### 输出
+| 数据 | 格式 | 单位 |
+|-----|------|------|
+| PM2.5预测值 | array | μg/m³ |
+
 ## 实现步骤
 
 ### 数据准备
@@ -114,6 +130,12 @@ $$
 | 冬季MAE | 15.09 µg/m³ |
 | 夏季MAE | 7.65 µg/m³ |
 | 相对基线提升 | 25.2% |
+
+## 方法指纹
+MD5: spin_physics_guided_spatiotemporal_kriging
+
+## 随机性
+- [x] 是（训练过程随机掩码节点，存在随机初始化）
 
 ## 应用场景
 

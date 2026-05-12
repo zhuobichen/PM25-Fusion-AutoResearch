@@ -115,3 +115,9 @@ $$
 - CMAQ模型输出的空间验证
 - 卫星AOD反演PM2.5的精度提升
 - 无监测区域的高分辨率PM2.5估算
+
+## 随机性
+- [x] 是（随机森林训练带随机性）
+
+## 方法指纹
+MD5: kriging_pseudo_label_augmentation

@@ -1,2 +1,2 @@
-method,ridge_alpha,elastic_alpha,elastic_l1,ridge_weight,en_weight,R2,MAE,RMSE,MB,R2_threshold,RMSE_threshold,MB_threshold,R2_pass,RMSE_pass,MB_pass,innovation_verified
-MultiLevelStackingEnsemble,0.0001,0.001,0.8,1.0,0.0,0.857148136944038,6.950667880861405,10.853076271296992,-2.0172845653491587e-13,0.8200000000000001,12.5159,0.0774,True,True,True,True
+method,ridge_alpha,elastic_alpha,elastic_l1,ridge_weight,en_weight,R2,MAE,RMSE,MB
+MultiLevelStackingEnsemble,0.0001,0.001,0.8,1.0,0.0,0.8481227601641851,7.0574252366224135,11.190674110437852,1.8708968392562863e-15

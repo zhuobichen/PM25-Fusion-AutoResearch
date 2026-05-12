@@ -1,7 +1,7 @@
 # 方法指纹库 (method_fingerprint.md5)
 # 格式: md5_hash | method_name | date
 # 生成时间: 2026-04-09
-# 最后更新: 2026-05-07
+# 最后更新: 2026-05-08
 
 # === 已有方法指纹 ===
 
@@ -44,3 +44,26 @@ wavelet_multiscale_gpr_residual_db4_3level_v1 | WaveletGPR | 20260507
 # === 排除方法记录 ===
 # msef_method_fingerprint_v1 | MSEF | 20260405 | 排除原因: 加权集成，使用交叉验证学习权重
 # stacking_ensemble_fingerprint | Stacking | - | 排除原因: 使用Ridge元学习器，权重学习
+
+# === 2026-05-08 新增复现方法指纹 ===
+idw_bias_correction_ratio_interpolation_v1 | V1_IDW_Bias | 20260508
+gwr_geographically_weighted_regression_local_v1 | V1_GWR | 20260508
+gen_friberg_three_step_cascade_fusion_v1 | V1_GenFriberg | 20260508
+
+# === 2026-05-08 新增创新方法指纹 ===
+variogram_guided_gpr_matern_residual_kriging_v1 | Innovation_VarioGPR_RK | 20260508
+heteroscedastic_spatial_gpr_poly_residual_kriging_v1 | Innovation_HeteroGPR_PolyRK | 20260508
+
+# === 2026-05-08 新增复现方法指纹（第二批）===
+cokriging_multivariate_joint_interpolation_v1 | Cokriging | 20260508
+
+# === 2026-05-08 新增创新方法指纹（第二批）===
+bayesian_model_averaging_fusion_bic_evidence_v1 | BMA-Fusion | 20260508
+transport_guided_anisotropic_kernel_cmaq_gradient_v1 | TGK | 20260508
+
+# === 2026-05-08 新增复现方法指纹（第三批）===
+bayesian_censored_exceedances_gpd_ar1_v1 | CensoredExceedances | 20260508
+msf_nng_cressman_nearest_neighbor_fusion_v1 | MSF-NNG | 20260508
+
+# === 2026-05-08 新增创新方法指纹（第三批）===
+residual_distribution_matching_kriging_gamma_gaussian_v1 | RDMK | 20260508

@@ -1,9 +1,9 @@
 # SmartToCode 方案清单
 
 生成时间: 2026-04-09
-最后更新: 2026-05-07
+最后更新: 2026-05-08
 
-## 复现方法指令（共31个）
+## 复现方法指令（共38个）
 
 | 序号 | 文件名 | 方法简称 | 核心技术 |
 |-----|--------|---------|---------|
@@ -37,10 +37,16 @@
 | 28 | V1_VNA方法.md | VNA | Voronoi邻域平均 |
 | 29 | V1_eVNA方法.md | eVNA | 乘性偏差校正 |
 | 30 | V1_aVNA方法.md | aVNA | 加性偏差校正 |
-| 31 | **RF-Kriging随机森林克里金残差校正法.md** | RF-Kriging | 随机森林+克里金残差 |
-| 32 | **MLE-OI最大似然最优插值法.md** | MLE-OI | MLE最优插值 |
+| 31 | RF-Kriging随机森林克里金残差校正法.md | RF-Kriging | 随机森林+克里金残差 |
+| 32 | MLE-OI最大似然最优插值法.md | MLE-OI | MLE最优插值 |
+| 33 | V1_IDW_Bias.md | IDW-Bias | IDW偏差加权 |
+| 34 | V1_GWR.md | GWR | 地理加权回归 |
+| 35 | V1_GenFriberg.md | GenFriberg | 广义融合三步级联 |
+| 36 | Cokriging共克里金法.md | Cokriging | 主辅变量互协方差联合插值 |
+| 37 | **CensoredExceedances方法_贝叶斯截断阈值融合法.md** | CensoredExceedances | 贝叶斯截断似然+GPD尾部建模 |
+| 38 | **MSF-NNG方法_多源最近邻网格融合法.md** | MSF-NNG | Cressman插值+最近邻匹配+加权融合 |
 
-## 创新方法指令（共29个）
+## 创新方法指令（共36个）
 
 | 序号 | 文件名 | 方法简称 | 核心创新点 |
 |-----|--------|---------|-----------|
@@ -72,39 +78,52 @@
 | 26 | Innovation_SLOOCV_AK.md | SLOOCV-AK | 空间LOO自适应克里金 |
 | 27 | PG-STGAT物理引导时空图注意力网络法.md | PG-STGAT | 物理引导图注意力 |
 | 28 | VCFFM变分协方差场融合模型.md | VCFFM | 变分协方差场 |
-| 29 | **Innovation_CopulaSpatialFusion.md** | CopulaFusion | Copula非高斯空间融合 |
-| 30 | **Innovation_WaveletGPR.md** | WaveletGPR | 小波多尺度GPR残差 |
+| 29 | Innovation_CopulaSpatialFusion.md | CopulaFusion | Copula非高斯空间融合 |
+| 30 | Innovation_WaveletGPR.md | WaveletGPR | 小波多尺度GPR残差 |
+| 31 | Innovation_VarioGPR_RK.md | VarioGPR-RK | 变异函数引导GPR残差 |
+| 32 | Innovation_HeteroGPR_PolyRK.md | HeteroGPR | 异方差空间GPR多项式RK |
+| 33 | Innovation_BMA_Fusion.md | BMA-Fusion | 贝叶斯模型平均后验概率融合 |
+| 34 | Innovation_TransportGuidedKernel.md | TGK | CMAQ梯度引导各向异性核融合 |
+| 35 | **Innovation_ResidualDistMatchKriging.md** | RDMK | Gamma分布匹配残差克里金 |
+| 36 | **Innovation_ResidualDistMatchKriging.md** | RDMK | 残差分布匹配克里金（Gamma→Gaussian变换） |
 
 ## 指纹库统计
 
 | 类别 | 数量 |
 |-----|------|
-| 复现方法指纹 | 5个 |
-| 创新方法指纹 | 7个 |
+| 复现方法指纹 | 12个 |
+| 创新方法指纹 | 15个 |
 | 排除方法记录 | 2个 |
-| **总计** | **12个有效指纹** |
+| **总计** | **29个有效指纹** |
 
-## 本轮新增（2026-05-07）
+## 本轮新增（2026-05-08 第二批）
 
 | 类型 | 方法 | 指纹 |
 |-----|------|------|
-| 复现 | RF-Kriging | rf_kriging_residual_random_forest_v1 |
-| 复现 | MLE-OI | mle_optimal_interpolation_bayesian_v1 |
-| 创新 | CopulaSpatialFusion | copula_non_gaussian_spatial_fusion_gamma_gaussian_v1 |
-| 创新 | WaveletGPR | wavelet_multiscale_gpr_residual_db4_3level_v1 |
+| 复现 | Cokriging | cokriging_multivariate_joint_interpolation_v1 |
+| 创新 | BMA-Fusion | bayesian_model_averaging_fusion_bic_evidence_v1 |
+| 创新 | TGK | transport_guided_anisotropic_kernel_cmaq_gradient_v1 |
+
+## 本轮新增（2026-05-08 第三批）
+
+| 类型 | 方法 | 指纹 |
+|-----|------|------|
+| 复现 | CensoredExceedances | bayesian_censored_exceedances_gpd_ar1_v1 |
+| 复现 | MSF-NNG | mspatiotemporal_nearest_neighbor_grids_msf_nng |
+| 创新 | RDMK | residual_distribution_matching_kriging_gamma_gaussian_v1 |
 
 ## 方法分类汇总
 
 | 类别 | 方法数 | 代表方法 |
 |-----|-------|---------|
 | 偏差校正类 | 8 | BC, QM, eVNA, aVNA, IDWB, ODI, VG-VNA, CR-ABC |
-| 空间插值类 | 10 | VNA, SK, UK, OI, FC1, FC2, STK, Cokriging, KPL, KCDP |
-| 贝叶斯/同化类 | 6 | BDA, BSTK, BSFM, BMF, BayesianDA, MLE-OI |
+| 空间插值类 | 12 | VNA, SK, UK, OI, FC1, FC2, STK, Cokriging, KPL, KCDP, TGK, MSF-NNG |
+| 贝叶斯/同化类 | 8 | BDA, BSTK, BSFM, BMF, BayesianDA, MLE-OI, BMA-Fusion, CensoredExceedances |
 | 克里金变体类 | 8 | ResidualKriging, GradAnisoKriging, MSAdaptKriging, SLOOCV-AK等 |
 | 多项式+GPR类 | 6 | PolyRK, HGP-RK, MKGP-RK, CSP-RK系列 |
 | 神经网络类 | 4 | DDNet, NDAF, PG-STGAT, PDEICNN |
 | 融合框架类 | 6 | OMA, SMA, MMA, EM, GF, 华北融合 |
-| 统计创新类 | 4 | CopulaFusion, WaveletGPR, VCFFM, CorrDiff |
+| 统计创新类 | 5 | CopulaFusion, WaveletGPR, VCFFM, CorrDiff, RDMK |
 
 ---
-更新时间: 2026-05-07
+更新时间: 2026-05-08

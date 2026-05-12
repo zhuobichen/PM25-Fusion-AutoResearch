@@ -635,13 +635,44 @@ exit_reason: "实现完成，代码已生成"
 
 ## 生成验证脚本（关键步骤）
 
-扫描 {project_root}/CodeWorkSpace/新融合方法代码/ 中的 .py 文件，
-对比 {project_root}/test_result/创新方法/ 中已有的 `*_十折标准模式.py` 脚本：
+使用模板生成器批量生成验证脚本：
 
-- **有代码但无验证脚本的方法** → 必须生成验证脚本
-- 参考已有脚本（如 AdvancedRK_十折标准模式.py）的结构
-- 每个新方法生成一个 `test_result/创新方法/{方法名}_十折标准模式.py`
-- 脚本必须包含：十折交叉验证、多阶段验证（pre_exp/stage1/stage2/stage3）、指标计算
+```bash
+# 预览需要生成的方法
+python -m shared.generate_validation_scripts --dry-run
+
+# 生成所有缺失的验证脚本
+python -m shared.generate_validation_scripts
+
+# 生成指定方法的脚本
+python -m shared.generate_validation_scripts --method MethodName
+```
+
+模板生成器会自动：
+- 扫描 CodeWorkSpace/新融合方法代码/ 中有代码但无验证脚本的方法
+- 生成标准格式的 `test_result/创新方法/{方法名}_十折标准模式.py`
+- 包含：十折交叉验证、多阶段验证（pre_exp/stage1/stage2/stage3）、指标计算
+- 支持 `--pre-only` 参数：只运行 pre_exp 预验证（快速筛选）
+- 内置 early stopping：pre_exp 失败自动停止，不浪费时间跑后续阶段
+
+## 两阶段验证流程（必须遵循）
+
+Phase 5 采用分阶段递进验证，符合 `文档拆分/02_创新判定规范.md` 和 `文档拆分/十折交叉验证架构文档.md` 的设计：
+
+```
+【预验证】pre_exp (5天) — 快速筛选
+    ↓
+通过？ → 否 → 停止，打回 Phase 3 重新设计
+    ↓ 是
+【正式验证】stage1 → stage2 → stage3 — 完整验证
+    ↓
+全部通过 → 创新成立
+```
+
+Pipeline 自动执行：
+1. 所有方法先跑 `--pre-only` 预验证（每个方法约 30 秒）
+2. 通过预验证的方法再跑完整 4 阶段验证
+3. 未通过的方法直接跳过，节省时间
 
 ## 基准带校验（必须先执行）
 

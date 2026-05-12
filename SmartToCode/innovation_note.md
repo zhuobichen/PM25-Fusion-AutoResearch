@@ -1,6 +1,6 @@
 # 创新方法笔记 (innovation_note.md)
 生成时间: 2026-04-09
-最后更新: 2026-05-07
+最后更新: 2026-05-08
 
 ## 创新思路
 
@@ -94,6 +94,65 @@
 - 尺度贡献分析：各尺度对总残差的方差贡献比
 - 敏感性测试：分解层数J=2,3,4的影响
 
+### 创新6：BMA-Fusion（贝叶斯模型平均融合）【2026-05-08第二批】
+**核心思路**：使用贝叶斯后验模型概率（而非Ridge/Lasso回归权重）组合多个基础方法。后验概率通过BIC近似模型证据计算，反映每个方法的预测可信度。
+
+**创新依据**：
+- BMA是经典贝叶斯组合方法，后验概率有明确物理意义（方法可信度）
+- 不使用权重学习（Ridge/Lasso），而是概率推断
+- 自动提供不确定性估计（预测方差）
+- 与Stacking/SuperEnsemble不同：BMA权重来自贝叶斯定理，非回归优化
+
+**风险假设**：
+- 基础方法高度相关时，BMA权重可能退化为近似均匀分布
+- BIC近似可能不够精确（尤其小样本）
+- 计算开销：需要对每个基础方法进行交叉验证
+
+**验证计划**：
+- 十折CV对比AdvancedRK（当前最优）
+- 后验权重分布分析：是否集中在最优方法上
+- 不确定性校准：预测区间覆盖率
+
+### 创新7：TGK（传输引导核融合）【2026-05-08第二批】
+**核心思路**：利用CMAQ梯度场构建各向异性空间核——沿大气传输方向相关距离长，垂直方向短。先用二次多项式校正CMAQ系统偏差，再用传输引导核GPR建模残差。
+
+**创新依据**：
+- 大气污染传输具有方向性（风向主导）
+- 现有方法（克里金、GPR）使用各向同性核，忽略方向性
+- CMAQ梯度场近似传输方向（梯度方向≈传输方向）
+- 高梯度区→各向异性强→沿传输方向相关距离更长
+
+**风险假设**：
+- CMAQ梯度可能有数值噪声（需平滑处理）
+- 梯度方向不总是等于传输方向（如复杂地形）
+- 各向异性参数α需通过交叉验证选择
+
+**验证计划**：
+- 十折CV对比各向同性GPR和AdvancedRK
+- 梯度强度与各向异性效果相关性分析
+- 参数α敏感性测试
+
+### 创新8：RDMK（残差分布匹配克里金）【2026-05-08第三批】
+**核心思路**：针对PM2.5残差的非高斯特性（右偏），使用参数化Gamma分布进行残差分布匹配，将非高斯残差变换为高斯变量后进行克里金插值，再反变换回原始尺度。
+
+**创新依据**：
+- PM2.5浓度呈右偏分布（Gamma/对数正态），残差同样具有偏态
+- 现有克里金/GPR方法假设残差服从高斯分布，高浓度区建模不准确
+- 参数化分布匹配比经验分位数映射更稳健（参数少、可外推）
+- 与Copula方法相比更简单（仅处理边际分布，不建模联合依赖结构）
+
+**风险假设**：
+- Gamma分布拟合质量依赖残差的分布形态
+- 小样本下Gamma分布MLE可能不稳定
+- 边界效应：极低/极高浓度区的分布匹配可能不稳定
+- 变换后的高斯性需验证（Shapiro-Wilk检验）
+
+**验证计划**：
+- 十折CV对比AdvancedRK（当前最优，R²=0.916）
+- 分浓度区间评估：低（<35）、中（35-75）、高（>75）μg/m³
+- 残差分布检验：Gamma拟合KS检验p值
+- 变换后高斯性检验：Shapiro-Wilk检验p值
+
 ## 排除方法分析
 
 ### MSEF（Multi-Scale Ensemble Fusion）- 排除
@@ -138,6 +197,24 @@
 **指纹**：mle_optimal_interpolation_bayesian_v1
 **特点**：经典数据同化方法，权重由误差协方差比值物理决定
 
+### Cokriging（共克里金）【2026-05-08第二批】
+**核心**：主变量（监测PM2.5）+辅助变量（CMAQ）的互协方差联合插值
+**适配**：监测站PM2.5为主变量，CMAQ为辅助变量
+**指纹**：cokriging_multivariate_joint_interpolation_v1
+**特点**：利用主辅变量空间互相关，理论基础扎实
+
+### CensoredExceedances（贝叶斯截断阈值融合）【2026-05-08第三批】
+**核心**：贝叶斯分层模型 + 截断似然（处理检测限） + GPD尾部建模 + AR(1)时间结构
+**适配**：CMAQ替代EAC4再分析数据，MLE替代MCMC
+**指纹**：bayesian_censored_exceedances_gpd_ar1_v1
+**特点**：处理PM2.5数据截断问题，GPD建模极端值
+
+### MSF-NNG（多源最近邻网格融合）【2026-05-08第三批】
+**核心**：Cressman插值 + 最近邻网格匹配 + 固定权重融合
+**适配**：监测站替代"大站"，CMAQ替代"模型数据"
+**指纹**：msf_nng_cressman_nearest_neighbor_fusion_v1
+**特点**：简单确定性方法，固定权重α=0.7
+
 ## 指纹重复检查
 
 | 方法指纹 | 状态 |
@@ -150,21 +227,45 @@
 | bayesian_stk_spatiotemporal_kriging_mcmc | 唯一 |
 | neuroddaf_v1_physics_informed_diffusion_advection | 唯一 |
 | conservative_transport_mass_balance_v1 | 唯一 |
-| rf_kriging_residual_random_forest_v1 | 唯一（新增） |
-| mle_optimal_interpolation_bayesian_v1 | 唯一（新增） |
-| copula_non_gaussian_spatial_fusion_gamma_gaussian_v1 | 唯一（新增） |
-| wavelet_multiscale_gpr_residual_db4_3level_v1 | 唯一（新增） |
+| rf_kriging_residual_random_forest_v1 | 唯一 |
+| mle_optimal_interpolation_bayesian_v1 | 唯一 |
+| copula_non_gaussian_spatial_fusion_gamma_gaussian_v1 | 唯一 |
+| wavelet_multiscale_gpr_residual_db4_3level_v1 | 唯一 |
+| cokriging_multivariate_joint_interpolation_v1 | 唯一 |
+| bayesian_model_averaging_fusion_bic_evidence_v1 | 唯一 |
+| transport_guided_anisotropic_kernel_cmaq_gradient_v1 | 唯一 |
+| bayesian_censored_exceedances_gpd_ar1_v1 | 唯一（新增） |
+| mspatiotemporal_nearest_neighbor_grids_msf_nng | 唯一（新增） |
+| residual_distribution_matching_kriging_gamma_gaussian_v1 | 唯一（新增） |
 
 ## 指纹库统计
 
 | 类别 | 数量 |
 |-----|------|
-| 复现方法指纹 | 5个（V1_DDNet, V1_BayesianSTK, V1_NeuroDDAF, RF-Kriging, MLE-OI） |
-| 创新方法指纹 | 7个（PDEICNN, PolyGPRAdapt, HybridEAVNA, ResidualKriging, ConservativeTransport, CopulaSpatialFusion, WaveletGPR） |
+| 复现方法指纹 | 9个（V1_DDNet, V1_BayesianSTK, V1_NeuroDDAF, RF-Kriging, MLE-OI, Cokriging, CensoredExceedances, MSF-NNG, IDW-Bias, GWR, Gen-Friberg） |
+| 创新方法指纹 | 12个（PDEICNN, PolyGPRAdapt, HybridEAVNA, ResidualKriging, ConservativeTransport, CopulaSpatialFusion, WaveletGPR, BMA-Fusion, TGK, VarioGPR-RK, HeteroGPR, RDMK） |
 | 排除方法记录 | 2个（MSEF, Stacking） |
-| **总计** | **12个有效指纹** |
+| **总计** | **23个有效指纹** |
 
-## 本轮新增（2026-05-07）
+## 本轮新增（2026-05-08 第一批）
+
+- 复现方法：3个（IDW-Bias, GWR, Gen-Friberg）
+- 创新方法：2个（VarioGPR-RK, HeteroGPR-PolyRK）
+- 新增指纹：5个
+
+## 本轮新增（2026-05-08 第二批）
+
+- 复现方法：1个（Cokriging共克里金法）
+- 创新方法：2个（BMA-Fusion, TGK）
+- 新增指纹：3个
+
+## 本轮新增（2026-05-08 第三批）
+
+- 复现方法：2个（CensoredExceedances贝叶斯截断阈值融合法, MSF-NNG多源最近邻网格融合法）
+- 创新方法：1个（RDMK残差分布匹配克里金）
+- 新增指纹：3个
+
+## 上轮新增（2026-05-07）
 
 - 复现方法：2个（RF-Kriging, MLE-OI）
 - 创新方法：2个（CopulaSpatialFusion, WaveletGPR）

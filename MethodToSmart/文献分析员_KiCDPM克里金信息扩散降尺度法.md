@@ -105,6 +105,11 @@ $$
 - 扩散模型学习残差的随机性
 - 条件引导确保空间一致性
 
+
+
+## 方法指纹
+MD5: kriging_informed_conditional_diffusion_pm
+
 ## 应用场景
 
 - CMAQ 25km→3km统计降尺度
