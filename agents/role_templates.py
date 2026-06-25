@@ -281,14 +281,17 @@ MD5: [自动生成，基于核心公式]
 
 ## PDF解析说明
 
-使用 opendataloader-pdf 解析PDF（如已安装）：
+使用 PyMuPDF 或 pdfplumber 解析PDF：
 ```python
-import opendataloader_pdf
-opendataloader_pdf.convert(
-    input_path=["paper.pdf"],
-    output_dir="temp_extract/",
-    format="markdown,json"
-)
+# 方式1: PyMuPDF (fitz)
+import fitz
+doc = fitz.open("paper.pdf")
+text = "\n".join(page.get_text() for page in doc)
+
+# 方式2: pdfplumber
+import pdfplumber
+with pdfplumber.open("paper.pdf") as pdf:
+    text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 ```
 
 ## 禁止行为
@@ -305,12 +308,7 @@ opendataloader_pdf.convert(
 - 方法指纹无重复
 - 完成时报告：分析方法数量、输出文件列表
 
-## 完成后自动触发
-
-完成所有任务后，在命令行执行以下命令触发下一阶段：
-```
-python -c "from agents.spawn_executor import SpawnExecutor; SpawnExecutor('{project_root}').trigger_next()"
-```
+## 完成后退出
 
 完成后退出的理由：
 exit_reason: "分析完成，方法文档已生成"
@@ -451,12 +449,7 @@ def456...   eVNA          20260408
 - 指纹库更新
 - 完成时报告：方案数量、新指纹数量
 
-## 完成后自动触发
-
-完成所有任务后，在命令行执行以下命令触发下一阶段：
-```
-python -c "from agents.spawn_executor import SpawnExecutor; SpawnExecutor('{project_root}').trigger_next()"
-```
+## 完成后退出
 
 完成后退出的理由：
 exit_reason: "设计完成，方案指令已生成"
@@ -561,13 +554,9 @@ def cross_validate(method_func, fold_split_table, selected_days):
 
 ### 指标计算
 '''python
-def calculate_metrics(y_true, y_pred):
-    n = len(y_true)
-    r2 = 1 - np.sum((y_pred - y_true)**2) / np.sum((np.mean(y_true) - y_true)**2)
-    mae = np.sum(np.abs(y_pred - y_true)) / n
-    rmse = np.sqrt(np.sum((y_pred - y_true)**2) / n)
-    mb = np.sum(y_pred - y_true) / n
-    return {{"R2": r2, "MAE": mae, "RMSE": rmse, "MB": mb}}
+from shared.metrics import compute_metrics
+# compute_metrics(y_true, y_pred) 返回 {{"R2", "MAE", "RMSE", "MB"}}
+# 已包含 NaN/Inf 掩码，无需自行实现
 '''
 
 ## 语义确认环节
@@ -592,12 +581,7 @@ def calculate_metrics(y_true, y_pred):
 - 代码可直接运行
 - 完成时报告：实现方法数量、输出文件列表
 
-## 完成后自动触发
-
-完成所有任务后，在命令行执行以下命令触发下一阶段：
-```
-python -c "from agents.spawn_executor import SpawnExecutor; SpawnExecutor('{project_root}').trigger_next()"
-```
+## 完成后退出
 
 完成后退出的理由：
 exit_reason: "实现完成，代码已生成"
@@ -698,13 +682,9 @@ Pipeline 自动执行：
 ## 指标计算
 
 ```python
-def calculate_metrics(y_true, y_pred):
-    n = len(y_true)
-    r2 = 1 - np.sum((y_pred - y_true)**2) / np.sum((np.mean(y_true) - y_true)**2)
-    mae = np.sum(np.abs(y_pred - y_true)) / n
-    rmse = np.sqrt(np.sum((y_pred - y_true)**2) / n)
-    mb = np.sum(y_pred - y_true) / n
-    return {{"R2": r2, "MAE": mae, "RMSE": rmse, "MB": mb}}
+from shared.metrics import compute_metrics
+# compute_metrics(y_true, y_pred) 返回 {"R2", "MAE", "RMSE", "MB"}
+# 已包含 NaN/Inf 掩码，无需自行实现
 ```
 
 ## 创新判定
@@ -796,12 +776,7 @@ test_result/
 - 生成 comparison_report.md
 - 完成时报告：各方法指标、创新是否成立
 
-## 完成后自动触发
-
-完成所有任务后，在命令行执行以下命令触发下一阶段：
-```
-python -c "from agents.spawn_executor import SpawnExecutor; SpawnExecutor('{project_root}').trigger_next()"
-```
+## 完成后退出
 
 完成后退出的理由：
 exit_reason: "验证完成，测试结果已生成"
@@ -838,7 +813,7 @@ exit_reason: "验证完成，测试结果已生成"
 | Title | 最佳方法名称 |
 | Abstract | 研究成果总结（R²提升、RMSE改善） |
 | Introduction | PM2.5监测的重要性、研究背景 |
-| Related Work | LocalPaperLibrary/ PDFs（用opendataloader-pdf解析） |
+| Related Work | LocalPaperLibrary/ PDFs（用 PyMuPDF/pdfplumber 解析） |
 | Methodology | SmartToCode/创新方法指令/ |
 | Experiments | test_result/历史最佳方案/ |
 | Results | comparison_report.md |
@@ -854,14 +829,17 @@ exit_reason: "验证完成，测试结果已生成"
 
 ## PDF解析
 
-使用 opendataloader-pdf 解析参考文献：
+使用 PyMuPDF 或 pdfplumber 解析参考文献：
 ```python
-import opendataloader_pdf
-opendataloader_pdf.convert(
-    input_path=["LocalPaperLibrary/*.pdf"],
-    output_dir="paper_output/references_json/",
-    format="markdown,json"
-)
+# 方式1: PyMuPDF (fitz)
+import fitz
+doc = fitz.open("paper.pdf")
+text = "\n".join(page.get_text() for page in doc)
+
+# 方式2: pdfplumber
+import pdfplumber
+with pdfplumber.open("paper.pdf") as pdf:
+    text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 ```
 
 ## LaTeX 模板

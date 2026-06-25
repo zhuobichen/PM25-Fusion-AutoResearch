@@ -1,7 +1,7 @@
 # Agent Spawn 工作流
 
 > **来源**：PM2.5_CMAQ融合方法自动研究全流程文档_v11_agent_spawn.md
-> **版本**：v11
+> **版本**：v14
 
 ---
 
@@ -10,15 +10,15 @@
 ## 6.1 完整执行流程
 
 ```
-Phase 0: executor.phase0_organize()  → spawn 整理Agent（整理前人遗留，生成INVENTORY.md）
-Phase X: executor.phaseX_check()     → 【新增】初始化检查
-Phase 1: executor.phase1_download()  → 并行 spawn 3个下载Agent
-Phase 2: executor.phase2_analyze()   → spawn 分析Agent
-Phase 3: executor.phase3_design()   → spawn 设计Agent
-Phase 4: executor.phase4_code()     → spawn 工程师Agent
-Phase 5: executor.phase5_test()     → spawn 测试Agent
+Phase 0: dispatcher.dispatch(0, ...)  → 生成整理任务，TRAE Agent 执行
+Phase X: 初始化检查（Python 直跑）
+Phase 1: dispatcher.dispatch(1, ...)  → 生成下载任务
+Phase 2: dispatcher.dispatch(2, ...)  → 生成分析任务
+Phase 3: dispatcher.dispatch(3, ...)  → 生成设计任务
+Phase 4: dispatcher.dispatch(4, ...)  → 生成编码任务
+Phase 5: run_verify_phase()           → Python 直接运行验证脚本
 Phase 6: 创新判定
-         ├─ 创新成立 → executor.phase6_write() → spawn 写作Agent
+         ├─ 创新成立 → dispatcher.dispatch(6, ...) → 生成写作任务
          └─ 创新不足 → 打回重设
 ```
 
@@ -47,35 +47,29 @@ def phaseX_check():
 ## 6.3 主会话 Agent Spawn 伪代码
 
 ```python
-from agents.spawn_executor import SpawnExecutor
+from agents.task_dispatcher import TaskDispatcher, build_prompt_for_phase
+from agents.artifact_detector import ArtifactDetector
 
-executor = SpawnExecutor(project_root)
+dispatcher = TaskDispatcher(project_root, backend='trae')
+detector = ArtifactDetector(project_root)
 
-# Phase 0: 项目整理（先整理房间，再开工）
-result = executor.phase0_organize()
-Agent(description="整理Agent", prompt=result['prompt'])
-executor.mark_completed('organizer')
+for phase_num in range(7):
+    # 先检测产物
+    if detector.check(phase_num)['done']:
+        continue
 
-# Phase X: 初始化检查
-check_result = executor.phaseX_check()
-if check_result['status'] == 'failed':
-    # 处理初始化失败
-    ...
+    # Phase 5: 直接运行
+    if phase_num == 5:
+        run_verify_phase()
+        continue
 
-# Phase 1: 并行下载
-spawns = executor.phase1_download()
-for agent_id, info in spawns.items():
-    Agent(description=f"下载Agent {agent_id}", prompt=info['prompt'])
-executor.mark_completed('dl_1')
-executor.mark_completed('dl_2')
-executor.mark_completed('dl_3')
+    # LLM Phase: 分发任务
+    prompt = build_prompt_for_phase(phase_num, project_root)
+    dispatcher.dispatch(phase_num, prompt)
 
-# Phase 2: 文献分析
-info = executor.phase2_analyze()
-Agent(description="文献分析 Agent", prompt=info['prompt'])
-executor.mark_completed('analyzer')
-
-# Phase 3-6: 类似...
+    # 异步后端：等待外部完成
+    if not dispatcher.backend.is_sync():
+        break  # 重新运行时自动检测产物并推进
 ```
 
 ## 6.4 状态文件 (.agent_state.json)
@@ -100,6 +94,10 @@ executor.mark_completed('analyzer')
   "last_run": "2026-04-08T12:20:00"
 }
 ```
+
+> **v14 补充说明**：除 `.agent_state.json`（记录 Pipeline 各 Phase 完成状态）之外，v14 额外引入 `test_result/.state/pending_task.json` 用于任务分发追踪。`pending_task.json` 记录当前 `TaskDispatcher` 派发给 TRAE 后端的待执行任务（含 phase_num、prompt 摘要、dispatch 时间等），与 `.agent_state.json` 配合实现"派发-产物检测-状态推进"的闭环：
+> - `.agent_state.json`：Pipeline 级状态（各 Phase 是否完成、创新是否成立、迭代轮次等）
+> - `test_result/.state/pending_task.json`：任务级状态（当前派发了什么任务、是否已被外部后端领取执行、是否产出产物）
 
 ---
 
@@ -424,7 +422,7 @@ paper_output/
 | Title | 最佳方法名称 | 简洁，包含核心创新点 |
 | Abstract | 研究成果总结 | R²提升、RMSE改善 |
 | Introduction | 研究背景 | PM2.5监测的重要性 |
-| Related Work | LocalPaperLibrary/ + **opendataloader-pdf解析** | 引用已有方法论文 |
+| Related Work | LocalPaperLibrary/ + **PyMuPDF/pdfplumber 解析** | 引用已有方法论文 |
 | Methodology | SmartToCode/创新方法指令/ | 详细描述提出的方法 |
 | Experiments | test_result/历史最佳方案/ | 十折验证结果 |
 | Results | comparison_report.md | 方法对比表 |

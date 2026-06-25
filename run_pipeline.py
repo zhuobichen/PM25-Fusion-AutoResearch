@@ -1,17 +1,22 @@
 # -*- coding: utf-8 -*-
 """
-PM2.5 CMAQ融合方法自动研究流程 v13.0
+PM2.5 CMAQ融合方法自动研究流程 v14.0
 =====================================
-Agent 自动执行版：支持 Claude CLI 串联执行 + profile 灵活配置
+闭环工作流版：支持多 Agent 后端（TRAE / CLI / Manual）
 
 使用方式：
-    # 手动指引模式（只打印指令）
+    # 闭环模式（默认，推荐）：生成任务描述，由 TRAE Agent 执行
+    python run_pipeline.py --auto
     python run_pipeline.py --auto --skip 1
     python run_pipeline.py --auto --only 3,4,5
 
-    # Agent 自动执行模式（调用 Claude CLI 串联执行）
+    # 指定后端
+    python run_pipeline.py --auto --backend trae      # TRAE Agent（默认）
+    python run_pipeline.py --auto --backend cli        # Claude CLI（向后兼容）
+    python run_pipeline.py --auto --backend manual     # 手动指引
+
+    # 向后兼容：--agent 等价于 --backend cli
     python run_pipeline.py --auto --agent
-    python run_pipeline.py --auto --agent --skip 1
     python run_pipeline.py --auto --agent --budget 5.0
 
     # 直接跑验证脚本（不需要 agent）
@@ -20,6 +25,13 @@ Agent 自动执行版：支持 Claude CLI 串联执行 + profile 灵活配置
     # Profile 管理
     python run_pipeline.py --list-profiles
     python run_pipeline.py --save-profile my-flow --skip 1
+
+闭环工作流原理：
+    1. run_pipeline.py 遇到 LLM Phase → 生成任务描述 → 返回
+    2. TRAE Agent 读取任务描述并执行
+    3. 产物产生后 → 重新运行 run_pipeline.py → 自动检测产物并推进
+    4. 遇到下一个 LLM Phase → 重复步骤 1-3
+    5. Phase 5（验证）始终直接执行 Python 脚本，无需 Agent
 """
 
 import os
@@ -28,8 +40,10 @@ import json
 import time
 import signal
 import glob
+import io
 import argparse
 import subprocess
+from contextlib import redirect_stdout, redirect_stderr
 from datetime import datetime
 
 # --- 路径初始化 ---
@@ -58,6 +72,180 @@ PHASE_INFO = {
     6: ('write',    '论文写作'),
 }
 
+_REGISTRY_SYNCED = False
+
+
+def _normalize_method_name(name):
+    """统一方法名，便于在脚本文件名、注册表、状态文件之间对齐。"""
+    return str(name).strip().replace('-', '_').replace(' ', '_')
+
+
+def _load_json_file(file_path):
+    if not os.path.exists(file_path):
+        return None
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _sync_method_registry(force=False, silent=True):
+    """从现有产物重建方法注册表，确保每次启动都基于最新结果继续。"""
+    global _REGISTRY_SYNCED
+    if _REGISTRY_SYNCED and not force:
+        return True
+
+    try:
+        from shared.build_registry import build_registry
+        if silent:
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                build_registry(merge=False, dry_run=False)
+        else:
+            build_registry(merge=False, dry_run=False)
+        _REGISTRY_SYNCED = True
+        return True
+    except Exception as e:
+        if not silent:
+            print(f"[警告] 方法注册表同步失败: {e}")
+        return False
+
+
+def _get_method_registry(sync=True):
+    """获取方法注册表实例。"""
+    if sync:
+        _sync_method_registry(silent=True)
+    try:
+        from shared.method_registry import MethodRegistry
+        return MethodRegistry(project_root=PROJECT_ROOT)
+    except Exception:
+        return None
+
+
+def _load_research_state():
+    """读取历史研究状态，供多次启动时延续优化方向。"""
+    state_path = os.path.join(PROJECT_ROOT, 'test_result', '.state', 'research_state.json')
+    return _load_json_file(state_path) or {}
+
+
+def _get_registry_state_names(state_name):
+    registry = _get_method_registry(sync=True)
+    if registry is None:
+        return []
+    try:
+        methods = registry.get_methods_by_state(state_name)
+        return sorted(m['name'] for m in methods if m.get('name'))
+    except Exception:
+        return []
+
+
+def _get_resume_context():
+    """汇总当前最佳方法、失败历史和待处理方法，用于迭代式优化。"""
+    research_state = _load_research_state()
+    pending_implemented = _get_registry_state_names('implemented')
+    pending_designed = _get_registry_state_names('designed')
+    verified_fail = _get_registry_state_names('verified_fail')
+
+    failed_methods = []
+    for item in research_state.get('failed_methods', [])[-5:]:
+        method = item.get('method')
+        reason = item.get('reason', '')
+        if method:
+            failed_methods.append((method, reason))
+
+    best_method = research_state.get('current_best_method') or PipelineState.load().get('current_best_method')
+    best_r2 = None
+    if research_state.get('current_best_metrics'):
+        best_r2 = research_state['current_best_metrics'].get('R2')
+    if best_r2 is None:
+        best_r2 = PipelineState.load().get('current_best_r2')
+
+    return {
+        'best_method': best_method or 'None',
+        'best_r2': best_r2,
+        'research_status': research_state.get('status', 'unknown'),
+        'iteration': research_state.get('iteration', 0),
+        'pending_designed': pending_designed,
+        'pending_implemented': pending_implemented,
+        'verified_fail': verified_fail,
+        'failed_methods': failed_methods,
+        'next_direction': research_state.get('status', ''),
+    }
+
+
+def _build_resume_prompt_block():
+    """为 Agent prompt 注入跨多次启动的历史上下文。"""
+    context = _get_resume_context()
+    best_r2_str = f"{context['best_r2']:.4f}" if isinstance(context['best_r2'], (int, float)) else "N/A"
+
+    lines = [
+        "## 历史迭代上下文（自动注入）",
+        "",
+        f"- 当前最佳方法: {context['best_method']}",
+        f"- 当前最佳R²: {best_r2_str}",
+        f"- 历史迭代轮次: {context['iteration']}",
+        f"- 研究状态: {context['research_status']}",
+    ]
+
+    if context['failed_methods']:
+        lines.append("- 最近失败方法（避免重复尝试同一路线）:")
+        for method, reason in context['failed_methods'][:5]:
+            reason_text = reason or "无记录原因"
+            lines.append(f"  - {method}: {reason_text}")
+
+    if context['pending_designed']:
+        lines.append(f"- 待实现方法: {', '.join(context['pending_designed'][:12])}")
+    else:
+        lines.append("- 待实现方法: 无")
+
+    if context['pending_implemented']:
+        lines.append(f"- 待验证方法: {', '.join(context['pending_implemented'][:12])}")
+    else:
+        lines.append("- 待验证方法: 无")
+
+    if context['verified_fail']:
+        lines.append(f"- 已验证失败方法数: {len(context['verified_fail'])}")
+
+    lines += [
+        "",
+        "要求：",
+        "- 本次执行必须基于以上历史结果继续推进，而不是重复从零开始。",
+        "- 优先处理待实现/待验证方法；只有在这些队列为空时才设计全新方法。",
+        "- 已验证通过、已验证失败的方法都不要重复跑同一流程，除非明确是在做定向改造。",
+    ]
+    return "\n".join(lines)
+
+
+def _recommended_phases_from_history():
+    """
+    根据历史结果给出默认执行阶段。
+    目标：多次启动时优先“继续上次未完成的迭代”，而不是重复全流程。
+    """
+    _sync_method_registry(silent=True)
+    context = _get_resume_context()
+    phases = []
+
+    paper_pdf = os.path.exists(os.path.join(PROJECT_ROOT, 'paper_output', 'paper.pdf'))
+    innovation_established = bool(PipelineState.load().get('innovation_established'))
+    if not innovation_established:
+        innovation_established = context['research_status'] == 'converged'
+
+    if context['pending_designed']:
+        phases.extend([4, 5])
+    elif context['pending_implemented']:
+        phases.append(5)
+    elif innovation_established:
+        if not paper_pdf:
+            phases.append(6)
+    else:
+        phases.extend([3, 4, 5])
+
+    deduped = []
+    for phase in phases:
+        if phase not in deduped:
+            deduped.append(phase)
+    return deduped
+
 
 # ============================================================
 # 状态管理
@@ -69,13 +257,18 @@ class PipelineState:
     STATE_FILE = os.path.join(PROJECT_ROOT, '.agent_state.json')
 
     @classmethod
-    def load(cls):
+    def load(cls, include_inferred=True):
         if os.path.exists(cls.STATE_FILE):
             with open(cls.STATE_FILE, 'r', encoding='utf-8') as f:
                 old_state = json.load(f)
             # Migrate old format -> new format
-            return cls._migrate(old_state)
-        return cls._default_state()
+            state = cls._migrate(old_state)
+        else:
+            state = cls._default_state()
+
+        if include_inferred:
+            return cls._merge_inferred_state(state)
+        return state
 
     @classmethod
     def _migrate(cls, old):
@@ -110,6 +303,7 @@ class PipelineState:
 
     @classmethod
     def save(cls, state):
+        state = cls._strip_inferred_fields(state)
         state['last_run'] = datetime.now().isoformat()
         with open(cls.STATE_FILE, 'w', encoding='utf-8') as f:
             json.dump(state, f, indent=2, ensure_ascii=False)
@@ -126,8 +320,210 @@ class PipelineState:
         }
 
     @classmethod
+    def _strip_inferred_fields(cls, state):
+        """仅保存显式状态，不把自动推断的字段回写到文件。"""
+        clean = {
+            'round': state.get('round', 0),
+            'phases': {},
+            'innovation_established': state.get('innovation_established', False),
+            'current_best_method': state.get('current_best_method'),
+            'current_best_r2': state.get('current_best_r2'),
+            'last_run': state.get('last_run'),
+        }
+        for phase_name, info in state.get('phases', {}).items():
+            if info.get('inferred') and not info.get('completed_at'):
+                continue
+            clean['phases'][phase_name] = {
+                'status': info.get('status', 'completed'),
+                'completed_at': info.get('completed_at', '')
+            }
+        return clean
+
+    @classmethod
+    def _merge_inferred_state(cls, state):
+        """将磁盘产物推断出的状态与显式状态合并。"""
+        merged = {
+            'round': state.get('round', 0),
+            'phases': dict(state.get('phases', {})),
+            'innovation_established': state.get('innovation_established', False),
+            'current_best_method': state.get('current_best_method'),
+            'current_best_r2': state.get('current_best_r2'),
+            'last_run': state.get('last_run'),
+        }
+
+        inferred = cls._infer_from_artifacts()
+
+        for phase_name, info in inferred.get('phases', {}).items():
+            existing = merged['phases'].get(phase_name)
+            if existing and existing.get('status') == 'completed':
+                continue
+            merged['phases'][phase_name] = info
+
+        if inferred.get('innovation_established'):
+            merged['innovation_established'] = True
+
+        inferred_r2 = inferred.get('current_best_r2')
+        current_r2 = merged.get('current_best_r2')
+        if inferred.get('current_best_method') and (
+            current_r2 is None or (inferred_r2 is not None and inferred_r2 > current_r2)
+        ):
+            merged['current_best_method'] = inferred['current_best_method']
+            merged['current_best_r2'] = inferred_r2
+
+        return merged
+
+    @classmethod
+    def _infer_from_artifacts(cls):
+        """基于现有产物推断各阶段状态，避免只依赖 .agent_state.json。
+
+        v14 改进：在文件计数之外，交叉验证 MethodRegistry 的方法状态，
+        使 Phase 完成判断更准确（不再仅靠文件数量阈值）。
+        """
+        inferred = {
+            'phases': {},
+            'innovation_established': False,
+            'current_best_method': None,
+            'current_best_r2': None,
+        }
+
+        def exists(rel_path):
+            return os.path.exists(os.path.join(PROJECT_ROOT, rel_path))
+
+        def count_matches(pattern):
+            return len(glob.glob(os.path.join(PROJECT_ROOT, pattern), recursive=True))
+
+        def mark_completed(phase_name):
+            inferred['phases'][phase_name] = {
+                'status': 'completed',
+                'completed_at': '',
+                'inferred': True,
+            }
+
+        # 尝试从 MethodRegistry 获取方法状态
+        registry = None
+        try:
+            from shared.method_registry import MethodRegistry
+            registry = MethodRegistry()
+        except Exception:
+            pass
+
+        if exists('INVENTORY.md'):
+            mark_completed('organize')
+
+        if count_matches('PaperDownload/**/*.pdf') > 0:
+            mark_completed('download')
+
+        method_docs = count_matches('MethodToSmart/*.md')
+        if method_docs >= 3:
+            mark_completed('analyze')
+
+        # design: 方案指令文件 + 注册表 designed 状态方法
+        design_docs = (
+            count_matches('SmartToCode/创新方法指令/*.md') +
+            count_matches('SmartToCode/复现方法指令/*.md')
+        )
+        designed_count = len(registry.get_methods_by_state('designed')) if registry else 0
+        if design_docs >= 3 or designed_count > 0:
+            mark_completed('design')
+
+        # code: 代码文件 + 注册表 implemented 状态方法
+        code_files = (
+            count_matches('CodeWorkSpace/新融合方法代码/*.py') +
+            count_matches('CodeWorkSpace/复现方法代码/*.py')
+        )
+        implemented_count = len(registry.get_methods_by_state('implemented')) if registry else 0
+        if code_files >= 3 or implemented_count > 0:
+            mark_completed('code')
+
+        # verify: 验证结果 + 注册表 verified 状态方法
+        verified_pass = len(registry.get_methods_by_state('verified_pass')) if registry else 0
+        verified_fail = len(registry.get_methods_by_state('verified_fail')) if registry else 0
+        if (
+            exists('test_result/基准方法/benchmark_multistage.json') or
+            count_matches('Innovation/success/**/*_all_stages.json') > 0 or
+            count_matches('test_result/创新方法/*_summary.csv') > 0 or
+            verified_pass + verified_fail > 0
+        ):
+            mark_completed('verify')
+
+        if exists('paper_output/paper.tex') or exists('paper_output/paper.pdf'):
+            mark_completed('write')
+
+        best_method, best_r2 = cls._infer_best_method_from_results()
+
+        # v14: 如果 MethodRegistry 有更准确的 best method，优先使用
+        if registry and not best_method:
+            try:
+                verified = registry.get_methods_by_state('verified_pass')
+                if verified:
+                    # 从 verified_pass 方法中选 R² 最高的
+                    best = max(verified, key=lambda m: m.get('metrics', {}).get('R2', -1))
+                    best_method = best['name']
+                    best_r2 = best.get('metrics', {}).get('R2')
+            except Exception:
+                pass
+
+        if best_method:
+            inferred['innovation_established'] = True
+            inferred['current_best_method'] = best_method
+            inferred['current_best_r2'] = best_r2
+
+        return inferred
+
+    @classmethod
+    def _infer_best_method_from_results(cls):
+        """
+        从 Innovation/success 中挑选当前最佳方法。
+        规则：排除同时出现在 failed/ 的方法，按 stage1~3 的平均 R² 排序。
+        """
+        failed_methods = set()
+        for path in glob.glob(os.path.join(PROJECT_ROOT, 'Innovation', 'failed', '*')):
+            if os.path.isdir(path):
+                failed_methods.add(os.path.basename(path).replace('-', '_'))
+
+        candidates = []
+        pattern = os.path.join(PROJECT_ROOT, 'Innovation', 'success', '**', '*_all_stages.json')
+        for json_path in glob.glob(pattern, recursive=True):
+            method_name = os.path.basename(os.path.dirname(json_path))
+            normalized_name = method_name.replace('-', '_')
+            if normalized_name in failed_methods:
+                continue
+
+            r2_values = cls._extract_stage_r2_values(json_path)
+            if len(r2_values) < 3:
+                continue
+
+            avg_r2 = sum(r2_values) / len(r2_values)
+            stage1_r2 = r2_values[0]
+            candidates.append((avg_r2, stage1_r2, method_name))
+
+        if not candidates:
+            return None, None
+
+        candidates.sort(reverse=True)
+        best_avg_r2, _stage1_r2, best_method = candidates[0]
+        return best_method, best_avg_r2
+
+    @staticmethod
+    def _extract_stage_r2_values(json_path):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except Exception:
+            return []
+
+        values = []
+        for stage_name in ('stage1', 'stage2', 'stage3'):
+            stage = data.get(stage_name, {})
+            metrics = stage.get('metrics', stage)
+            r2 = metrics.get('R2')
+            if isinstance(r2, (int, float)):
+                values.append(float(r2))
+        return values
+
+    @classmethod
     def phase_completed(cls, phase_name):
-        state = cls.load()
+        state = cls.load(include_inferred=False)
         state['phases'][phase_name] = {
             'status': 'completed',
             'completed_at': datetime.now().isoformat()
@@ -135,27 +531,35 @@ class PipelineState:
         cls.save(state)
 
     @classmethod
-    def is_phase_done(cls, phase_name):
-        state = cls.load()
+    def is_phase_done(cls, phase_name, include_inferred=True):
+        state = cls.load(include_inferred=include_inferred)
         return state['phases'].get(phase_name, {}).get('status') == 'completed'
 
     @classmethod
     def mark_innovation(cls, method_name, r2):
-        state = cls.load()
+        state = cls.load(include_inferred=False)
         if state.get('current_best_r2') is None or r2 > state['current_best_r2']:
             state['current_best_method'] = method_name
             state['current_best_r2'] = r2
+            state['innovation_established'] = True
         cls.save(state)
 
     @classmethod
     def print_status(cls):
         state = cls.load()
+        resume_context = _get_resume_context()
+        pending_design = len(resume_context.get('pending_designed', []))
+        pending_verify = len(resume_context.get('pending_implemented', []))
+        research_status = resume_context.get('research_status', 'unknown')
         print(f"""
 === 流水线状态 ===
 轮次:       {state.get('round', 'N/A')}
 最佳方法:   {state.get('current_best_method', 'None')} (R²={state.get('current_best_r2', 'N/A')})
 创新成立:   {state.get('innovation_established', False)}
 上次运行:   {state.get('last_run', '从未')}
+研究状态:   {research_status}
+待实现方法: {pending_design}
+待验证方法: {pending_verify}
 
 各 Phase 状态:
   Phase 0 (整理):   {cls._phase_status(state, 'organize')}
@@ -170,7 +574,10 @@ class PipelineState:
     @staticmethod
     def _phase_status(state, phase):
         p = state['phases'].get(phase, {})
-        return p.get('status', '未开始')
+        status = p.get('status', '未开始')
+        if status == 'completed' and p.get('inferred') and not p.get('completed_at'):
+            return '已完成(推断)'
+        return status
 
 
 # ============================================================
@@ -248,96 +655,17 @@ class PipelineConfig:
 # Claude CLI 执行器
 # ============================================================
 
-class ClaudeExecutor:
-    """通过 claude CLI 非交互模式执行 agent prompt"""
+# ============================================================
+# Agent 后端（通过 task_dispatcher 支持多后端）
+# ============================================================
 
-    def __init__(self, project_root, budget=None, model=None, timeout=600):
-        self.project_root = project_root
-        self.budget = budget
-        self.model = model
-        self.timeout = timeout
-        self.claude_cmd = self._find_claude()
+from agents.task_dispatcher import TaskDispatcher, build_prompt_for_phase
+from agents.artifact_detector import ArtifactDetector
 
-    @staticmethod
-    def _find_claude():
-        """查找 claude CLI 的完整路径"""
-        import shutil
-        claude_path = shutil.which('claude')
-        if claude_path:
-            return claude_path
-        # Windows npm 全局目录常见路径
-        npm_paths = [
-            os.path.expandvars(r'%APPDATA%\npm\claude.CMD'),
-            os.path.expandvars(r'%APPDATA%\npm\claude.cmd'),
-            os.path.expandvars(r'%APPDATA%\npm\claude'),
-        ]
-        for p in npm_paths:
-            if os.path.exists(p):
-                return p
-        return 'claude'  # fallback，让报错信息更明确
-
-    def execute(self, prompt, phase_name=""):
-        """
-        调用 claude -p 执行 prompt，通过 stdin 传递（避免命令行长度限制）。
-        返回 (success: bool, output: str)
-        """
-        cmd = [self.claude_cmd, "-p", "--output-format", "text"]
-        if self.budget:
-            cmd += ["--max-budget-usd", str(self.budget)]
-        if self.model:
-            cmd += ["--model", self.model]
-
-        # 确保子进程能找到项目模块和 claude CLI
-        env = os.environ.copy()
-        env['PYTHONPATH'] = self.project_root + os.pathsep + env.get('PYTHONPATH', '')
-        npm_bin = os.path.expandvars(r'%APPDATA%\npm')
-        if npm_bin not in env.get('PATH', ''):
-            env['PATH'] = npm_bin + os.pathsep + env.get('PATH', '')
-
-        label = f"[Agent:{phase_name}] " if phase_name else "[Agent] "
-        print(f"\n{label}启动 Claude CLI...")
-        timeout_str = f"超时: {self.timeout}s" if self.timeout else "无超时限制"
-        print(f"{label}{timeout_str}" + (f" | 预算: ${self.budget}" if self.budget else ""))
-        print("-" * 60)
-
-        try:
-            process = subprocess.Popen(
-                cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                cwd=self.project_root,
-                env=env,
-                text=True,
-                encoding='utf-8',
-                errors='replace',
-            )
-
-            # 通过 stdin 传递 prompt，然后关闭 stdin
-            stdout_data, _ = process.communicate(input=prompt, timeout=self.timeout if self.timeout else None)
-
-            # 实时打印输出
-            print(stdout_data, end='')
-
-            success = process.returncode == 0
-
-            print("-" * 60)
-            if success:
-                print(f"{label}执行成功")
-            else:
-                print(f"{label}执行失败 (exit code: {process.returncode})")
-            return success, stdout_data
-
-        except subprocess.TimeoutExpired:
-            process.kill()
-            print(f"\n{label}超时 ({self.timeout}s)，已终止")
-            return False, "timeout"
-        except FileNotFoundError:
-            print(f"\n错误: 未找到 'claude' CLI。请确保 Claude Code 已安装。")
-            return False, "claude not found"
-        except Exception as e:
-            print(f"\n{label}执行异常: {e}")
-            return False, str(e)
+# 向后兼容：ClaudeExecutor 已迁移至 task_dispatcher.CLIBackend
+# 旧代码如需引用，可通过以下方式获取：
+#   from agents.task_dispatcher import get_backend
+#   cli_backend = get_backend('cli', project_root, budget=5.0)
 
 
 # ============================================================
@@ -401,13 +729,20 @@ def resolve_phases(args):
 
 def print_plan(phases):
     """执行前展示计划"""
+    state = PipelineState.load()
     print("\n执行计划:")
     print("-" * 45)
     for p in range(7):
         name, desc = PHASE_INFO[p]
         if p in phases:
-            done = PipelineState.is_phase_done(name)
-            status = " [已完成,将跳过]" if done else " [待执行]"
+            phase_info = state['phases'].get(name, {})
+            if phase_info.get('status') == 'completed':
+                if phase_info.get('inferred') and not phase_info.get('completed_at'):
+                    status = " [已完成(推断),仍可执行]"
+                else:
+                    status = " [已完成,将跳过]"
+            else:
+                status = " [待执行]"
             print(f"  Phase {p} ({desc}):  >>>{status}")
         else:
             print(f"  Phase {p} ({desc}):  跳过")
@@ -439,7 +774,10 @@ class PhaseRunner:
         if not role:
             return None
         from agents.role_templates import get_spawn_prompt
-        return get_spawn_prompt(role, PROJECT_ROOT)
+        base_prompt = get_spawn_prompt(role, PROJECT_ROOT)
+        if phase_num in (2, 3, 4, 6):
+            return f"{base_prompt}\n\n{_build_resume_prompt_block()}\n"
+        return base_prompt
 
     @staticmethod
     def print_guidance(phase_num):
@@ -558,11 +896,70 @@ def _generate_validation_scripts(method_names: list, env: dict):
         print(f"  [错误] 验证脚本生成失败: {e}")
 
 
+def _get_pending_verification_targets():
+    """从方法注册表中获取真正待验证的方法。"""
+    registry = _get_method_registry(sync=True)
+    if registry is None:
+        return []
+    try:
+        return registry.get_pending_verification()
+    except Exception:
+        return []
+
+
+def _build_validation_script_map(innovation_dir):
+    """扫描现有验证脚本，建立 方法名 -> 脚本路径 的映射。"""
+    script_map = {}
+    if not os.path.exists(innovation_dir):
+        return script_map
+
+    for f in os.listdir(innovation_dir):
+        if not (f.endswith('_十折标准模式.py') or f.endswith('_十折验证.py')):
+            continue
+        method_name = f.split('_十折')[0] if '_十折' in f else f.rsplit('_', 1)[0]
+        script_map[_normalize_method_name(method_name)] = os.path.join(innovation_dir, f)
+    return script_map
+
+
+def _pick_best_verified_method():
+    """
+    从方法注册表中选择当前最佳已验证方法，供多次启动时延续优化方向。
+    规则：仅在 verified_pass 中选择，按 R2 从高到低排序。
+    """
+    registry = _get_method_registry(sync=True)
+    if registry is None:
+        return None, None
+
+    try:
+        candidates = registry.get_methods_by_state('verified_pass')
+    except Exception:
+        return None, None
+
+    best_name = None
+    best_r2 = None
+    for entry in candidates:
+        metrics = entry.get('metrics', {})
+        r2 = metrics.get('R2')
+        if isinstance(r2, (int, float)) and (best_r2 is None or r2 > best_r2):
+            best_name = entry.get('name')
+            best_r2 = float(r2)
+    return best_name, best_r2
+
+
+def _refresh_pipeline_best_method():
+    """将注册表中的最佳已验证方法同步回 PipelineState。"""
+    best_name, best_r2 = _pick_best_verified_method()
+    if best_name and isinstance(best_r2, (int, float)):
+        PipelineState.mark_innovation(best_name, best_r2)
+
+
 def run_verify_phase():
     """Phase 5 特殊处理：直接运行 Python 验证脚本，不经过 Claude agent"""
     print(f"\n{'=' * 60}")
     print("Phase 5: 测试验证（直接执行）")
     print("=" * 60)
+
+    _sync_method_registry(silent=True)
 
     # 确保子进程能找到 shared、Code/Downscaler 等模块
     extra_paths = [
@@ -594,51 +991,50 @@ def run_verify_phase():
 
     # 2. 运行创新方法验证
     innovation_dir = data_path('test_result/创新方法')
-    scripts = []
-    if os.path.exists(innovation_dir):
-        for f in os.listdir(innovation_dir):
-            if f.endswith('_十折标准模式.py') or f.endswith('_十折验证.py'):
-                scripts.append(os.path.join(innovation_dir, f))
+    script_map = _build_validation_script_map(innovation_dir)
+    pending_methods = _get_pending_verification_targets()
 
     # 2.0 检查是否有新方法需要生成验证脚本
     code_dir = data_path('CodeWorkSpace/新融合方法代码')
     if os.path.exists(code_dir):
-        existing_script_names = set()
-        for s in scripts:
-            basename = os.path.basename(s)
-            name = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
-            existing_script_names.add(name.replace('-', '_'))
-
-        # 找出有代码但无验证脚本的方法
-        skip_prefixes = ('compare_', 'find_best_', 'validate_', 'lambda_', 'spatial_stat_',
-                         'statistical_', 'robust_variogram_', 'mle_', 'elegant_', 'adaptive_')
         new_methods = []
-        for py_file in os.listdir(code_dir):
-            if not py_file.endswith('.py'):
-                continue
-            if py_file.startswith(skip_prefixes):
-                continue
-            method_name = py_file[:-3]
-            if method_name.replace('-', '_') not in existing_script_names:
+        existing_script_names = set(script_map.keys())
+        for method_name in pending_methods:
+            if _normalize_method_name(method_name) not in existing_script_names:
                 new_methods.append(method_name)
 
         if new_methods:
             print(f"\n  发现 {len(new_methods)} 个新方法需要生成验证脚本: {', '.join(new_methods[:5])}{'...' if len(new_methods) > 5 else ''}")
             # 使用模板生成器生成验证脚本
             _generate_validation_scripts(new_methods, env)
-            # 重新扫描脚本
-            scripts = []
-            if os.path.exists(innovation_dir):
-                for f in os.listdir(innovation_dir):
-                    if f.endswith('_十折标准模式.py') or f.endswith('_十折验证.py'):
-                        scripts.append(os.path.join(innovation_dir, f))
+            script_map = _build_validation_script_map(innovation_dir)
 
-    if not scripts:
-        print("\n  未找到创新方法验证脚本")
-        print("  请先完成 Phase 4 (代码实现)")
+    if not pending_methods:
+        print("\n  当前没有待验证方法。")
+        print("  本次启动将基于已有结果继续，不会重复重跑历史验证。")
+        _refresh_pipeline_best_method()
+        PipelineState.phase_completed('verify')
+        return True
+
+    scripts_to_run = []
+    missing_scripts = []
+    for method_name in pending_methods:
+        script_path = script_map.get(_normalize_method_name(method_name))
+        if script_path:
+            scripts_to_run.append(script_path)
+        else:
+            missing_scripts.append(method_name)
+
+    if missing_scripts:
+        print(f"\n  以下待验证方法尚无验证脚本: {', '.join(missing_scripts[:10])}")
+        print("  请先完成 Phase 4 或检查脚本生成器。")
         return False
 
-    scripts_to_run = scripts
+    if not scripts_to_run:
+        print("\n  没有可执行的待验证脚本")
+        return False
+
+    print(f"\n[信息] 本次仅验证待处理方法: {', '.join(pending_methods[:12])}{'...' if len(pending_methods) > 12 else ''}")
 
     # === 阶段 2a: 预验证 (pre_exp) ===
     print(f"\n[2a/3] 预验证 (pre_exp) — {len(scripts_to_run)} 个方法:")
@@ -698,6 +1094,8 @@ def run_verify_phase():
         except Exception as e:
             print(f"  [警告] 注册表更新失败: {e}")
 
+    _sync_method_registry(force=True, silent=True)
+    _refresh_pipeline_best_method()
     PipelineState.phase_completed('verify')
     print(f"\n[完成] Phase 5 (verify) — 预验证 {len(scripts_to_run)} 个, 正式验证 {len(pre_passed)} 个")
     return True
@@ -733,69 +1131,103 @@ def _update_registry_after_verify(method_name: str, registry=None):
     # 没有 all_stages JSON，跳过（模板始终生成 JSON，CSV fallback 已废弃）
 
 
-def run_phase(phase_num, executor=None):
+def run_phase(phase_num, dispatcher=None):
     """
     运行指定 Phase。
 
-    - executor=None: 打印手动指引
-    - executor=ClaudeExecutor: 调用 Claude CLI 自动执行
+    - dispatcher=None: 等价于 manual 后端（打印指引）
+    - dispatcher=TaskDispatcher(backend='trae'): 生成任务描述，由外部 Agent 执行
+    - dispatcher=TaskDispatcher(backend='cli'): 通过 Claude CLI 执行（同步）
     - Phase 5 始终直接运行 Python 脚本
     """
     if phase_num not in range(7):
         print(f"无效 Phase: {phase_num} (可选: 0-6)")
         return False
 
+    if phase_num in (2, 3, 4, 5, 6):
+        _sync_method_registry(silent=True)
+
     name, desc = PHASE_INFO[phase_num]
-    if PipelineState.is_phase_done(name):
+    if PipelineState.is_phase_done(name, include_inferred=False):
         print(f"Phase {phase_num} ({name}) 已完成，跳过。")
         return True
 
-    # Phase 5: 直接运行验证脚本
+    # Phase 5: 直接运行验证脚本（不受后端影响）
     if phase_num == 5:
         return run_verify_phase()
 
-    # Agent 模式
-    if executor is not None:
-        prompt = PhaseRunner.get_prompt(phase_num)
-        if not prompt:
-            print(f"  Phase {phase_num} 无 prompt 模板，跳过")
-            return True
-        success, output = executor.execute(prompt, phase_name=name)
-        if success:
-            PipelineState.phase_completed(name)
-            print(f"\n[完成] Phase {phase_num} ({name})")
+    # 先检测产物是否已存在（闭环关键：可能有外部 Agent 已完成）
+    detector = ArtifactDetector(PROJECT_ROOT)
+    artifact = detector.check(phase_num)
+    if artifact['done']:
+        print(f"Phase {phase_num} ({name}) 产物已检测到，标记完成。")
+        print(f"  详情: {artifact['details']}")
+        PipelineState.phase_completed(name)
+        return True
+
+    # 构建 prompt
+    from agents.task_dispatcher import build_prompt_for_phase
+    resume_context = _get_resume_context()
+    prompt = build_prompt_for_phase(phase_num, PROJECT_ROOT, resume_context)
+    if not prompt:
+        print(f"  Phase {phase_num} 无 prompt 模板，跳过")
+        return True
+
+    # 分发任务
+    if dispatcher is not None:
+        success, output, task_desc = dispatcher.dispatch(phase_num, prompt, resume_context)
+
+        # 同步后端（如 CLI）：执行完立即检测产物
+        if success and dispatcher.backend.is_sync():
+            artifact = detector.check(phase_num)
+            if artifact['done']:
+                print(f"\n[产物检测] Phase {phase_num} 产物已生成: {artifact['details']}")
+                PipelineState.phase_completed(name)
+            else:
+                print(f"\n[警告] Phase {phase_num} 后端执行完成，但未检测到预期产物")
+                print(f"  详情: {artifact['details']}")
+            return success
+        # 异步后端（如 TRAE/Manual）：返回等待外部执行
         return success
+    else:
+        # 无 dispatcher：使用手动指引模式
+        PhaseRunner.print_guidance(phase_num)
+        print(f"\n[提示] Phase {phase_num} ({name}) 仅输出指引，未自动标记为完成。")
+        print("      实际产物会在 `--status` 中自动识别。")
+        return True
 
-    # 手动指引模式
-    PhaseRunner.print_guidance(phase_num)
-    PipelineState.phase_completed(name)
-    print(f"\n[完成] Phase {phase_num} ({name}) 已标记为完成")
-    return True
 
-
-def run_auto(phases=None, executor=None):
+def run_auto(phases=None, dispatcher=None):
     """
     自动运行指定或全部 Phase。
 
-    - executor=None: 打印手动指引
-    - executor=ClaudeExecutor: 调用 Claude CLI 自动串联执行
+    - dispatcher=None: 手动指引模式
+    - dispatcher=TaskDispatcher(backend='trae'): 闭环模式（默认推荐）
+    - dispatcher=TaskDispatcher(backend='cli'): CLI 模式（同步阻塞）
     """
     if phases is None:
-        phases = list(range(7))
+        phases = _recommended_phases_from_history() or list(range(7))
 
-    mode = "Agent 自动执行" if executor else "手动指引"
+    backend_name = dispatcher.backend_name if dispatcher else "manual"
     print("=" * 60)
-    print(f"PM2.5 CMAQ 融合方法自动研究流程 v13.0 [{mode}]")
+    print(f"PM2.5 CMAQ 融合方法自动研究流程 v14.0 [{backend_name} 后端]")
     print("=" * 60)
 
     PipelineState.print_status()
     print_plan(phases)
 
     for phase_num in phases:
-        success = run_phase(phase_num, executor=executor)
-        if not success and executor is not None:
+        success = run_phase(phase_num, dispatcher=dispatcher)
+        if not success and dispatcher is not None:
             print(f"\n[中断] Phase {phase_num} 失败，停止后续 phase。")
             break
+
+        # 异步后端：任务已分发，等待外部执行后重新运行
+        if dispatcher is not None and not dispatcher.backend.is_sync():
+            if not PipelineState.is_phase_done(PHASE_INFO[phase_num][0]):
+                print(f"\n[等待] Phase {phase_num} 任务已分发到 {backend_name} 后端。")
+                print(f"  请执行任务后重新运行 run_pipeline.py 自动推进。")
+                break
 
     print("\n" + "=" * 60)
     executed = [p for p in phases if not PipelineState.is_phase_done(PHASE_INFO[p][0])]
@@ -807,8 +1239,14 @@ def run_auto(phases=None, executor=None):
         skipped_names = [PHASE_INFO[p][1] for p in skipped]
         print(f"跳过的 Phase: {', '.join(skipped_names)}")
 
-    if executor:
-        print("Agent 执行完毕。")
+    if dispatcher:
+        if dispatcher.backend.is_sync():
+            print("Agent 执行完毕。")
+        else:
+            remaining = [PHASE_INFO[p][0] for p in executed]
+            if remaining:
+                print(f"待执行 Phase: {', '.join(remaining)}")
+                print("请在外部 Agent 完成任务后重新运行。")
     else:
         print("请按指引在 Claude Code 中执行各 LLM 依赖的 Phase。")
     print("=" * 60)
@@ -817,7 +1255,7 @@ def run_auto(phases=None, executor=None):
 def run_interactive():
     """交互式运行"""
     print("=" * 60)
-    print("PM2.5 CMAQ 融合方法自动研究流程 v11.0")
+    print("PM2.5 CMAQ 融合方法自动研究流程 v14.0")
     print("=" * 60)
 
     PipelineState.print_status()
@@ -848,21 +1286,64 @@ def run_interactive():
             print("无效选择")
 
 
+def _create_dispatcher(args):
+    """
+    根据命令行参数创建 TaskDispatcher。
+
+    优先级: --backend > --agent(向后兼容) > None(手动模式)
+
+    --backend trae:   闭环模式，生成任务描述由外部 Agent 执行
+    --backend cli:    Claude CLI 同步执行
+    --backend manual: 手动指引
+    --agent:          等价于 --backend cli（向后兼容）
+    无参数:           等价于 --backend manual
+    """
+    # 确定后端名称
+    if args.backend:
+        backend_name = args.backend
+    elif args.agent:
+        backend_name = 'cli'  # 向后兼容
+    else:
+        return None  # 手动指引模式
+
+    # 构建 backend kwargs
+    backend_kwargs = {}
+    if backend_name == 'cli':
+        if args.budget:
+            backend_kwargs['budget'] = args.budget
+        if args.model:
+            backend_kwargs['model'] = args.model
+        if args.timeout:
+            backend_kwargs['timeout'] = args.timeout
+
+    try:
+        from agents.task_dispatcher import TaskDispatcher
+        return TaskDispatcher(PROJECT_ROOT, backend=backend_name, **backend_kwargs)
+    except Exception as e:
+        print(f"[警告] 创建 {backend_name} 后端失败: {e}")
+        print(f"  回退到手动指引模式")
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='PM2.5 CMAQ融合方法自动研究流程',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  # 手动指引模式（只打印指令，不执行）
-  python run_pipeline.py --auto                         # 运行全部（或 config default）
-  python run_pipeline.py --auto --skip 1                # 跳过下载
-  python run_pipeline.py --auto --only 3,4,5            # 只跑设计+编码+验证
+  # 闭环模式（默认推荐）：生成任务描述，由 TRAE Agent 执行
+  python run_pipeline.py --auto                              # 运行全部
+  python run_pipeline.py --auto --skip 1                     # 跳过下载
+  python run_pipeline.py --auto --only 3,4,5                 # 只跑设计+编码+验证
+  python run_pipeline.py --auto --backend trae               # 显式指定 TRAE 后端
 
-  # Agent 自动执行模式（调用 Claude CLI 串联执行）
-  python run_pipeline.py --auto --agent                 # 全自动
-  python run_pipeline.py --auto --agent --skip 1        # 跳过下载
-  python run_pipeline.py --auto --agent --budget 5.0    # 限制每个 phase 花费
+  # CLI 模式（向后兼容，调用 Claude CLI）
+  python run_pipeline.py --auto --backend cli                # 使用 CLI 后端
+  python run_pipeline.py --auto --agent                      # 等价于 --backend cli
+  python run_pipeline.py --auto --agent --budget 5.0         # 限制每个 phase 花费
+
+  # 手动指引模式
+  python run_pipeline.py --auto --backend manual             # 只打印指引
 
   # 直接跑验证（不需要 agent）
   python run_pipeline.py --auto --only 5
@@ -878,15 +1359,18 @@ def main():
     parser.add_argument('--auto', action='store_true', help='自动运行 Phase')
     parser.add_argument('--reset', action='store_true', help='重置流水线状态')
 
-    # Agent 模式
+    # Agent 模式（向后兼容）
     parser.add_argument('--agent', action='store_true',
-                        help='使用 Claude Agent 自动执行（默认：只打印指引）')
+                        help='使用 Claude CLI 自动执行（等价于 --backend cli）')
+    parser.add_argument('--backend', type=str, default=None, metavar='NAME',
+                        choices=['trae', 'cli', 'manual'],
+                        help='指定 Agent 后端 (trae: 闭环模式[默认], cli: Claude CLI, manual: 手动指引)')
     parser.add_argument('--budget', type=float, metavar='USD',
-                        help='每个 Phase 的最大花费（美元）')
+                        help='每个 Phase 的最大花费（美元，仅 cli 后端）')
     parser.add_argument('--model', type=str, metavar='MODEL',
-                        help='指定 Claude 模型')
+                        help='指定 Claude 模型（仅 cli 后端）')
     parser.add_argument('--timeout', type=int, default=None, metavar='SEC',
-                        help='每个 Phase 的超时秒数（默认无限制）')
+                        help='每个 Phase 的超时秒数（默认无限制，仅 cli 后端）')
 
     # Phase 选择
     parser.add_argument('--skip', type=str, metavar='N,N,...',
@@ -926,6 +1410,27 @@ def main():
 
     if args.status:
         PipelineState.print_status()
+        # 同时显示产物检测结果
+        from agents.artifact_detector import ArtifactDetector, format_detection_report
+        detector = ArtifactDetector(PROJECT_ROOT)
+        detections = detector.check_all()
+        print()
+        print(format_detection_report(detections))
+        pending = detector.get_pending_phases()
+        if pending:
+            pending_names = [PHASE_INFO[p][1] for p in pending]
+            print(f"产物待完成 Phase: {', '.join(pending_names)}")
+        # 显示待处理任务
+        try:
+            from agents.task_dispatcher import TaskDispatcher
+            dispatcher = TaskDispatcher(PROJECT_ROOT, backend='manual')
+            task = dispatcher.get_pending_task()
+            if task:
+                print(f"\n待处理任务: Phase {task.get('phase')} ({task.get('title')})")
+                print(f"  分发时间: {task.get('dispatched_at')}")
+                print(f"  后端: {task.get('backend')}")
+        except Exception:
+            pass
         return
 
     if args.list_profiles:
@@ -966,8 +1471,8 @@ def main():
 
     # --- 单个 phase ---
     if args.phase is not None:
-        executor = ClaudeExecutor(PROJECT_ROOT, args.budget, args.model, args.timeout) if args.agent else None
-        run_phase(args.phase, executor=executor)
+        dispatcher = _create_dispatcher(args)
+        run_phase(args.phase, dispatcher=dispatcher)
         return
 
     # --- --auto（带可选 phase 选择）---
@@ -977,13 +1482,12 @@ def main():
         if has_selection:
             phases = resolve_phases(args)
         else:
-            phases = PipelineConfig.get_default_phases() or list(range(7))
+            phases = _recommended_phases_from_history()
+            if not phases:
+                phases = PipelineConfig.get_default_phases() or list(range(7))
 
-        executor = None
-        if args.agent:
-            executor = ClaudeExecutor(PROJECT_ROOT, args.budget, args.model, args.timeout)
-
-        run_auto(phases, executor=executor)
+        dispatcher = _create_dispatcher(args)
+        run_auto(phases, dispatcher=dispatcher)
         return
 
     # 默认：交互式

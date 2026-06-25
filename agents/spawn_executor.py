@@ -640,7 +640,10 @@ def print_spawn_guide():
 
 
 if __name__ == '__main__':
-    project_root = 'str(get_project_root())'
+    import sys, os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from shared.paths import get_project_root
+    project_root = str(get_project_root())
 
     print(f"初始化项目: {project_root}")
     executor = SpawnExecutor(project_root)

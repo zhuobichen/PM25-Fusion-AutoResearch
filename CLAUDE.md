@@ -116,19 +116,24 @@ Innovation/failed/            # Failed methods
 ## Code Import Patterns
 
 ```python
+# 推荐方式：使用 shared.paths（自动解析项目根目录，无需硬编码）
+from shared.paths import get_project_root, data_path
+import sys, os
+root = str(get_project_root())
+
 # For baseline methods
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code/Downscaler')
+sys.path.insert(0, os.path.join(root, 'Code/Downscaler'))
 from pm25_downscaler import PM25Downscaler
 from common_setting import CommonSetting
 from Code.VNAeVNAaVNA.nna_methods import NNA
 
 # For innovative methods
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/新融合方法代码')
+sys.path.insert(0, os.path.join(root, 'CodeWorkSpace/新融合方法代码'))
 from PolyRK import PolyRK
 from AdvancedRK import AdvancedRK
 
 # For reproduced methods
-sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/CodeWorkSpace/复现方法代码')
+sys.path.insert(0, os.path.join(root, 'CodeWorkSpace/复现方法代码'))
 from ReproductionMethods import BayesianDataAssimilation, GPDownscaling
 ```
 

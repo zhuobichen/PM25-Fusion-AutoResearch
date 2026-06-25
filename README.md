@@ -19,35 +19,43 @@
 ## Quick Start
 
 ```bash
-# 查看流水线状态
+# 查看流水线状态 + 产物检测
 python run_pipeline.py --status
 
-# 一键运行（跳过文献下载，Agent 自动串联执行）
-python run_pipeline.py --auto --agent --skip 1
+# 闭环模式（默认）：生成任务描述，由 TRAE Agent 执行
+python run_pipeline.py --auto --backend trae --skip 1
 
-# 只跑验证（直接执行 Python 脚本）
+# CLI 模式（向后兼容）：通过 Claude CLI 自动执行
+python run_pipeline.py --auto --backend cli --skip 1
+
+# 只跑验证（直接执行 Python 脚本，不需要 Agent）
 python run_pipeline.py --auto --only 5
 
 # 使用预置配置
-python run_pipeline.py --auto --agent --profile skip-download
+python run_pipeline.py --auto --profile skip-download
 ```
 
 ---
 
-## Pipeline Architecture
+## Pipeline Architecture (v14.0 闭环工作流)
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   Phase 2    │     │   Phase 3    │     │   Phase 4    │     │   Phase 5    │
 │   文献分析    │────→│   方案设计    │────→│   代码实现    │────→│   测试验证    │
-│   Claude CLI  │     │   Claude CLI  │     │   Claude CLI  │     │  Python 直跑  │
+│   Task Disp.  │     │   Task Disp.  │     │   Task Disp.  │     │  Python 直跑  │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
        │                    │                    │                    │
        ▼                    ▼                    ▼                    ▼
   MethodToSmart/       SmartToCode/        CodeWorkSpace/        test_result/
 ```
 
-每个 Phase 通过 `claude -p` 启动独立 Claude 子进程，自动读取前序产出，无需手动干预。
+闭环工作流原理：
+1. `run_pipeline.py` 遇到 LLM Phase → 生成结构化任务描述 → 返回
+2. TRAE Agent 读取任务描述并执行
+3. 产物产生后 → 重新运行 `run_pipeline.py` → `ArtifactDetector` 自动检测产物并推进
+4. 遇到下一个 LLM Phase → 重复步骤 1-3
+5. Phase 5（验证）始终直接执行 Python 脚本，无需 Agent
 
 ---
 
@@ -55,13 +63,13 @@ python run_pipeline.py --auto --agent --profile skip-download
 
 | Phase | Name | Method | Output |
 |:-----:|------|--------|--------|
-| 0 | 项目整理 | `claude -p` | `INVENTORY.md` |
-| 1 | 文献下载 | `claude -p` | `PaperDownload/` |
-| 2 | 文献分析 | `claude -p` | `MethodToSmart/` |
-| 3 | 方案设计 | `claude -p` | `SmartToCode/` |
-| 4 | 代码实现 | `claude -p` | `CodeWorkSpace/` |
+| 0 | 项目整理 | Task Dispatcher | `INVENTORY.md` |
+| 1 | 文献下载 | Task Dispatcher | `PaperDownload/` |
+| 2 | 文献分析 | Task Dispatcher | `MethodToSmart/` |
+| 3 | 方案设计 | Task Dispatcher | `SmartToCode/` |
+| 4 | 代码实现 | Task Dispatcher | `CodeWorkSpace/` |
 | 5 | 测试验证 | Python 脚本 | `test_result/` |
-| 6 | 论文写作 | `claude -p` | `paper_output/` |
+| 6 | 论文写作 | Task Dispatcher | `paper_output/` |
 
 ---
 
@@ -69,9 +77,11 @@ python run_pipeline.py --auto --agent --profile skip-download
 
 | Mode | Command | Use Case |
 |------|---------|----------|
-| **Guidance** | `--auto --skip 1` | 只打印执行指引 |
-| **Agent** | `--auto --agent --skip 1` | Claude CLI 自动执行 |
+| **TRAE (闭环)** | `--auto --backend trae` | 生成任务描述，由 TRAE Agent 执行（默认推荐） |
+| **CLI** | `--auto --backend cli` | 通过 Claude CLI 自动执行（同步阻塞） |
+| **Manual** | `--auto --backend manual` | 打印手动指引 |
 | **Verify** | `--auto --only 5` | 直接运行验证脚本 |
+| **Agent (兼容)** | `--auto --agent` | 等价于 `--backend cli` |
 
 ---
 
@@ -156,7 +166,7 @@ pre_exp → stage1 → stage2 → stage3
 
 ```
 Data_Fusion_AutoResearch/
-├── run_pipeline.py                 # 流水线入口
+├── run_pipeline.py                 # 流水线入口 v14.0
 ├── pipeline_config.json            # Profile 配置
 ├── CLAUDE.md                       # Claude Code 项目说明
 ├── INVENTORY.md                    # 项目总清单
@@ -173,7 +183,7 @@ Data_Fusion_AutoResearch/
 ├── MethodToSmart/                  #   41 个方法文档（文献分析员输出）
 ├── SmartToCode/                    #   55+ 个设计指令（方案设计师输出）
 │
-├── PaperDownload/                  #   ~100 篇论文 PDF（按 score 分类）
+├── PaperDownload/                  #   ~500 篇论文 PDF（按 score 分类）
 ├── PaperDownloadMd/                #   论文清单与分析报告
 ├── LocalPaperLibrary/              #   12 篇中文论文原文
 │
@@ -185,26 +195,29 @@ Data_Fusion_AutoResearch/
 ├── test_result/
 │   ├── 基准方法/                    #   基准方法验证结果
 │   ├── 创新方法/                    #   创新方法验证结果
+│   ├── .state/                     #   状态追踪（pending_task.json 等）
 │   └── comparison_report.md        #   全方法对比报告
 │
 ├── Innovation/
 │   ├── success/                    #   已确认创新方法 (AdvancedRK, PolyRK, ...)
-│   └── failed/                     #   验证失败方法 (GARK, PG-STGAT, ...)
+│   └── failed/                     #   验证失败方法
 │
 ├── paper_output/
 │   ├── paper.tex                   #   论文主文件
 │   ├── paper.pdf                   #   编译后 PDF
 │   └── references.bib              #   参考文献
 │
-├── agents/                         #   Agent 模块
+├── agents/                         #   闭环工作流 Agent 系统
+│   ├── task_dispatcher.py          #     任务调度器（多后端：TRAE/CLI/Manual）
+│   ├── artifact_detector.py        #     产物检测器（7 Phase 自动检测）
 │   ├── role_templates.py           #     6 个 Agent 角色 Prompt
-│   ├── spawn_executor.py           #     Agent spawn 执行器
-│   └── workflow_orchestrator.py    #     工作流编排
+│   └── spawn_executor.py           #     Spawn 执行器（v11 遗留兼容）
 │
 └── shared/                         #   共享工具
-    ├── paths.py                    #     路径解析
+    ├── paths.py                    #     路径解析（无硬编码）
     ├── metrics.py                  #     评估指标
-    └── geo_utils.py                #     地理空间工具
+    ├── geo_utils.py                #     地理空间工具
+    └── method_registry.py         #     方法生命周期注册表
 ```
 
 ---
@@ -221,18 +234,19 @@ Phase Selection:
   --only N,N,...          只运行指定 Phase
   --profile NAME          使用预置配置
 
-Agent Mode:
-  --agent                 启用 Claude CLI 自动执行
-  --budget USD            每个 Phase 最大花费
-  --model MODEL           指定 Claude 模型
-  --timeout SEC           每个 Phase 超时（默认无限制）
+Backend Mode:
+  --backend NAME          指定 Agent 后端 (trae|cli|manual)
+  --agent                 等价于 --backend cli（向后兼容）
+  --budget USD            每个 Phase 最大花费（仅 cli）
+  --model MODEL           指定 Claude 模型（仅 cli）
+  --timeout SEC           每个 Phase 超时（默认无限制，仅 cli）
 
 Profile Management:
   --list-profiles         显示所有配置
   --save-profile NAME     保存当前选择为配置
 
 Status:
-  --status                查看流水线状态
+  --status                查看流水线状态 + 产物检测结果
   --reset                 重置流水线状态
 ```
 
@@ -251,9 +265,29 @@ Status:
 | `code-iterate` | 4-5 | 编码 + 验证迭代 |
 
 ```bash
-python run_pipeline.py --auto --agent --profile skip-download
+python run_pipeline.py --auto --backend trae --profile skip-download
 python run_pipeline.py --save-profile my-flow --skip 1,6
 ```
+
+---
+
+## Multi-Agent Backend Extension
+
+```python
+from agents.task_dispatcher import register_backend, BackendBase
+
+class MyBackend(BackendBase):
+    name = 'my_agent'
+    def execute(self, task):
+        # 自定义执行逻辑
+        return True, "完成"
+    def is_sync(self):
+        return False  # 异步后端
+
+register_backend('my_agent', MyBackend)
+```
+
+内置后端：`trae`（闭环异步）、`cli`（Claude CLI 同步）、`manual`（手动指引）
 
 ---
 
@@ -263,7 +297,7 @@ python run_pipeline.py --save-profile my-flow --skip 1,6
 numpy  pandas  scikit-learn  netCDF4  joblib
 ```
 
-Agent 模式需要 [Claude Code CLI](https://claude.ai/code)。
+闭环模式（默认）无需外部 CLI 依赖。CLI 模式需要 [Claude Code CLI](https://claude.ai/code)。
 
 ---
 

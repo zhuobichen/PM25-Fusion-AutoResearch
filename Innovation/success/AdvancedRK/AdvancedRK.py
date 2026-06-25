@@ -1,5 +1,3 @@
-import os
-from shared.paths import get_project_root, data_path
 # -*- coding: utf-8 -*-
 """
 AdvancedRK - Advanced Residual Kriging with Matern Kernel
@@ -23,8 +21,10 @@ AdvancedRK: 基于Matern核的高斯过程回归残差克里金方法
 日期: 2026-04-16
 """
 
+import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shared.paths import get_project_root, data_path
 
 import numpy as np
 import pandas as pd
