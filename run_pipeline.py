@@ -531,6 +531,18 @@ class PipelineState:
         cls.save(state)
 
     @classmethod
+    def reset_phase(cls, phase_name):
+        """重置指定 Phase 的完成状态，允许闭环迭代中重新执行。"""
+        state = cls.load(include_inferred=False)
+        if phase_name in state.get('phases', {}):
+            state['phases'][phase_name] = {
+                'status': 'pending',
+                'completed_at': '',
+                'reset_at': datetime.now().isoformat()
+            }
+            cls.save(state)
+
+    @classmethod
     def is_phase_done(cls, phase_name, include_inferred=True):
         state = cls.load(include_inferred=include_inferred)
         return state['phases'].get(phase_name, {}).get('status') == 'completed'
@@ -1096,9 +1108,143 @@ def run_verify_phase():
 
     _sync_method_registry(force=True, silent=True)
     _refresh_pipeline_best_method()
+
+    # === 闭环关键：将本轮验证结果写入 StateTracker，实现经验沉淀 ===
+    _record_iteration_to_state_tracker(pre_passed, scripts_to_run)
+
     PipelineState.phase_completed('verify')
     print(f"\n[完成] Phase 5 (verify) — 预验证 {len(scripts_to_run)} 个, 正式验证 {len(pre_passed)} 个")
     return True
+
+
+def _record_iteration_to_state_tracker(pre_passed, scripts_to_run):
+    """
+    将本轮验证结果写入 StateTracker，实现经验沉淀。
+
+    - 通过的方法 → accept_mutation()：更新最佳方法
+    - 失败的方法 → reject_mutation()：记录失败原因
+    - 检查收敛/耗尽条件 → 判断是否需要继续迭代
+    """
+    try:
+        from agents.research_state_tracker import StateTracker, ResearchStatus
+        state_dir = os.path.join(PROJECT_ROOT, 'test_result', '.state')
+        tracker = StateTracker(state_dir)
+
+        # 如果状态从未初始化（iteration=0），用基准指标初始化
+        if tracker.state.iteration == 0:
+            baseline_r2 = _get_baseline_r2()
+            if baseline_r2 is not None:
+                tracker.initialize(
+                    baseline_metrics={'R2': baseline_r2},
+                    baseline_method='VNA_baseline'
+                )
+                print(f"  [StateTracker] 初始化基准: R²={baseline_r2:.4f}")
+
+        # 收集本轮所有已验证方法的结果
+        registry = _get_method_registry(sync=True)
+        if registry is None:
+            return
+
+        # 正式验证通过的方法 → accept
+        for method_name, script in pre_passed:
+            try:
+                method_info = registry.get_method(method_name)
+                if method_info is None:
+                    continue
+                metrics = method_info.get('metrics', {})
+                r2 = metrics.get('R2')
+                if r2 is None:
+                    continue
+
+                # 判断是否优于当前最佳
+                current_best_r2 = tracker.state.current_best_metrics.get('R2', 0)
+                if r2 > current_best_r2:
+                    tracker.start_iteration(method_name)
+                    tracker.update_metrics(metrics, method_name)
+                    tracker.accept_mutation(
+                        method_name=method_name,
+                        metrics=metrics,
+                        description=method_info.get('description', ''),
+                        code_diff=''
+                    )
+                    print(f"  [StateTracker] 接受变异: {method_name} R²={r2:.4f} (↑ from {current_best_r2:.4f})")
+                else:
+                    # 通过但未超越最佳 → 记录但标记为非最佳
+                    print(f"  [StateTracker] {method_name} R²={r2:.4f} 未超越最佳 {current_best_r2:.4f}")
+            except Exception as e:
+                print(f"  [StateTracker] 记录 {method_name} 时出错: {e}")
+
+        # 预验证未通过的方法 → reject
+        all_tested = set(_normalize_method_name(m) for m, _ in pre_passed)
+        for method_name in scripts_to_run:
+            try:
+                basename = os.path.basename(method_name)
+                mn = basename.split('_十折')[0] if '_十折' in basename else basename.rsplit('_', 1)[0]
+                if _normalize_method_name(mn) in all_tested:
+                    continue
+                # 未通过 pre_exp 的方法
+                pre_json = data_path(f'test_result/创新方法/{mn}_pre_exp.json')
+                fail_reason = "预验证未通过"
+                fail_metrics = {}
+                if os.path.exists(pre_json):
+                    with open(pre_json, 'r', encoding='utf-8') as f:
+                        pre_data = json.load(f)
+                    fail_metrics = pre_data.get('metrics', {})
+                    fail_reason = pre_data.get('fail_reason', fail_reason)
+
+                tracker.start_iteration(mn)
+                tracker.reject_mutation(
+                    method_name=mn,
+                    metrics=fail_metrics or {'R2': 0},
+                    reason=fail_reason,
+                    description=''
+                )
+                print(f"  [StateTracker] 拒绝变异: {mn} ({fail_reason})")
+            except Exception as e:
+                pass  # 静默跳过
+
+        # 打印迭代摘要
+        summary = tracker.get_current_state()
+        direction = tracker.get_next_optimization_direction()
+        print(f"\n  [迭代摘要] 第 {summary['iteration']} 轮 | 状态: {summary['status']}")
+        print(f"  最佳方法: {summary['current_best_method']} R²={summary['current_best_r2']:.4f}")
+        print(f"  累计接受: {summary['accepted_count']} | 拒绝: {summary['rejected_count']}")
+        print(f"  连续无改进: {summary['consecutive_no_improvement']}/{tracker.state.max_consecutive_no_improvement}")
+        if tracker.should_continue():
+            print(f"  下一步方向: {direction}")
+        else:
+            print(f"  [收敛] 研究状态: {summary['status']}，停止迭代")
+
+    except ImportError:
+        print(f"  [StateTracker] 模块未找到，跳过经验沉淀")
+    except Exception as e:
+        print(f"  [StateTracker] 经验沉淀失败: {e}")
+
+
+def _get_baseline_r2():
+    """获取基准方法的 R² 作为迭代基线。"""
+    try:
+        benchmark_json = data_path('test_result/基准方法/benchmark_multistage.json')
+        if os.path.exists(benchmark_json):
+            with open(benchmark_json, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            # 取 VNA 的 pre_exp R² 作为基线
+            vna = data.get('VNA', {})
+            pre_exp = vna.get('pre_exp', {})
+            r2 = pre_exp.get('R2')
+            if r2 is not None:
+                return float(r2)
+            # 或取所有方法的最佳 pre_exp R²
+            best_r2 = 0
+            for method_name, method_data in data.items():
+                if isinstance(method_data, dict):
+                    r2_val = method_data.get('pre_exp', {}).get('R2', 0)
+                    if isinstance(r2_val, (int, float)) and r2_val > best_r2:
+                        best_r2 = r2_val
+            return best_r2 if best_r2 > 0 else None
+    except Exception:
+        return None
+    return None
 
 
 def _update_registry_after_verify(method_name: str, registry=None):
@@ -1197,13 +1343,20 @@ def run_phase(phase_num, dispatcher=None):
         return True
 
 
-def run_auto(phases=None, dispatcher=None):
+def run_auto(phases=None, dispatcher=None, max_iterations=20):
     """
-    自动运行指定或全部 Phase。
+    自动运行指定或全部 Phase，支持闭环迭代。
+
+    v14 闭环模式：
+    - 遇到 LLM Phase → 分发任务 → 等待外部执行 → 重新运行检测产物
+    - Phase 5 验证后 → 写入 StateTracker → 检查是否需继续迭代
+    - 如果未收敛（should_continue()=True）→ 自动推进下一轮设计+编码+验证
+    - 如果收敛或耗尽 → 结束
 
     - dispatcher=None: 手动指引模式
     - dispatcher=TaskDispatcher(backend='trae'): 闭环模式（默认推荐）
     - dispatcher=TaskDispatcher(backend='cli'): CLI 模式（同步阻塞）
+    - max_iterations: 最大迭代轮次（防止无限循环）
     """
     if phases is None:
         phases = _recommended_phases_from_history() or list(range(7))
@@ -1216,39 +1369,138 @@ def run_auto(phases=None, dispatcher=None):
     PipelineState.print_status()
     print_plan(phases)
 
-    for phase_num in phases:
-        success = run_phase(phase_num, dispatcher=dispatcher)
-        if not success and dispatcher is not None:
-            print(f"\n[中断] Phase {phase_num} 失败，停止后续 phase。")
-            break
+    # === 闭环迭代循环 ===
+    iteration = 0
+    while iteration < max_iterations:
+        iteration += 1
+        print(f"\n{'─' * 60}")
+        print(f"迭代轮次 {iteration}/{max_iterations}")
+        print(f"{'─' * 60}")
 
-        # 异步后端：任务已分发，等待外部执行后重新运行
-        if dispatcher is not None and not dispatcher.backend.is_sync():
-            if not PipelineState.is_phase_done(PHASE_INFO[phase_num][0]):
-                print(f"\n[等待] Phase {phase_num} 任务已分发到 {backend_name} 后端。")
-                print(f"  请执行任务后重新运行 run_pipeline.py 自动推进。")
+        # 执行本轮各 Phase
+        phase_executed = False
+        for phase_num in phases:
+            success = run_phase(phase_num, dispatcher=dispatcher)
+            if not success and dispatcher is not None:
+                print(f"\n[中断] Phase {phase_num} 失败，停止后续 phase。")
                 break
 
+            # 异步后端：任务已分发，等待外部执行后重新运行
+            if dispatcher is not None and not dispatcher.backend.is_sync():
+                if not PipelineState.is_phase_done(PHASE_INFO[phase_num][0]):
+                    print(f"\n[等待] Phase {phase_num} 任务已分发到 {backend_name} 后端。")
+                    print(f"  请执行任务后重新运行 run_pipeline.py 自动推进。")
+                    _print_loop_summary(phases, dispatcher, iteration, max_iterations)
+                    return
+
+            phase_executed = True
+
+        # === 迭代判定 ===
+        # Phase 5 验证完成后，检查是否需要继续迭代
+        should_continue, reason = _check_iteration_status()
+        if not should_continue:
+            print(f"\n[迭代终止] {reason}")
+            break
+
+        # 如果当前 Phase 列表不含验证（Phase 5），不需要继续迭代
+        if 5 not in phases:
+            break
+
+        # 检查是否还有待验证方法（有则继续，无则可能需要设计新方法）
+        pending_implemented = _get_registry_state_names('implemented')
+        pending_designed = _get_registry_state_names('designed')
+
+        if pending_implemented:
+            # 有待验证方法 → 下一轮只跑验证
+            next_phases = [5]
+            print(f"\n[继续迭代] 还有 {len(pending_implemented)} 个待验证方法，自动进入下一轮验证")
+        elif pending_designed:
+            # 有待实现方法 → 下一轮跑编码+验证
+            next_phases = [4, 5]
+            print(f"\n[继续迭代] 还有 {len(pending_designed)} 个待实现方法，自动进入下一轮编码+验证")
+        else:
+            # 队列空了，需要设计新方法 → 下一轮跑设计+编码+验证
+            next_phases = [3, 4, 5]
+            print(f"\n[继续迭代] 方法队列已空，自动进入下一轮设计+编码+验证")
+
+        # 重置 Phase 完成状态以允许重新执行
+        for p in next_phases:
+            PipelineState.reset_phase(PHASE_INFO[p][0])
+
+        phases = next_phases
+        print(f"  下一轮 Phase: {', '.join(PHASE_INFO[p][0] for p in phases)}")
+
+    _print_loop_summary(phases, dispatcher, iteration, max_iterations)
+
+
+def _check_iteration_status():
+    """
+    检查是否应该继续迭代。
+
+    Returns:
+        tuple: (should_continue: bool, reason: str)
+    """
+    try:
+        from agents.research_state_tracker import StateTracker
+        state_dir = os.path.join(PROJECT_ROOT, 'test_result', '.state')
+        tracker = StateTracker(state_dir)
+
+        if not tracker.should_continue():
+            status = tracker.state.status
+            if status == 'converged':
+                return False, f"创新已收敛 (R²={tracker.state.current_best_metrics.get('R2', 0):.4f} ≥ 阈值)"
+            elif status == 'exhausted':
+                return False, f"创新力耗尽 (连续 {tracker.state.consecutive_no_improvement} 次无改进)"
+            elif status == 'max_iterations':
+                return False, f"已达迭代上限 ({tracker.state.iteration} 轮)"
+            else:
+                return False, f"状态: {status}"
+
+        return True, "继续迭代"
+    except Exception as e:
+        # StateTracker 不可用时，默认不循环（安全降级）
+        return False, f"StateTracker 不可用 ({e})"
+
+
+def _print_loop_summary(phases, dispatcher, iteration, max_iterations):
+    """打印闭环迭代摘要"""
     print("\n" + "=" * 60)
     executed = [p for p in phases if not PipelineState.is_phase_done(PHASE_INFO[p][0])]
     completed = [p for p in phases if PipelineState.is_phase_done(PHASE_INFO[p][0])]
     skipped = [p for p in range(7) if p not in phases]
 
     print(f"已完成: {len(completed)} | 待执行: {len(executed)} | 跳过: {len(skipped)}")
+    print(f"迭代轮次: {iteration}/{max_iterations}")
     if skipped:
         skipped_names = [PHASE_INFO[p][1] for p in skipped]
         print(f"跳过的 Phase: {', '.join(skipped_names)}")
 
+    # 打印研究状态摘要
+    try:
+        from agents.research_state_tracker import StateTracker
+        state_dir = os.path.join(PROJECT_ROOT, 'test_result', '.state')
+        tracker = StateTracker(state_dir)
+        summary = tracker.get_current_state()
+        print(f"\n研究状态: {summary['status']}")
+        print(f"最佳方法: {summary['current_best_method']} (R²={summary['current_best_r2']:.4f})")
+        print(f"累计接受: {summary['accepted_count']} | 拒绝: {summary['rejected_count']}")
+        print(f"连续无改进: {summary['consecutive_no_improvement']}")
+        if tracker.should_continue():
+            direction = tracker.get_next_optimization_direction()
+            print(f"下一步方向: {direction}")
+    except Exception:
+        pass
+
     if dispatcher:
         if dispatcher.backend.is_sync():
-            print("Agent 执行完毕。")
+            print("\nAgent 执行完毕。")
         else:
             remaining = [PHASE_INFO[p][0] for p in executed]
             if remaining:
-                print(f"待执行 Phase: {', '.join(remaining)}")
+                print(f"\n待执行 Phase: {', '.join(remaining)}")
                 print("请在外部 Agent 完成任务后重新运行。")
     else:
-        print("请按指引在 Claude Code 中执行各 LLM 依赖的 Phase。")
+        print("\n请按指引在 IDE 中执行各 LLM 依赖的 Phase。")
     print("=" * 60)
 
 
@@ -1371,6 +1623,8 @@ def main():
                         help='指定 Claude 模型（仅 cli 后端）')
     parser.add_argument('--timeout', type=int, default=None, metavar='SEC',
                         help='每个 Phase 的超时秒数（默认无限制，仅 cli 后端）')
+    parser.add_argument('--max-iterations', type=int, default=20, metavar='N',
+                        help='闭环迭代最大轮次（默认 20，防止无限循环）')
 
     # Phase 选择
     parser.add_argument('--skip', type=str, metavar='N,N,...',
@@ -1487,7 +1741,7 @@ def main():
                 phases = PipelineConfig.get_default_phases() or list(range(7))
 
         dispatcher = _create_dispatcher(args)
-        run_auto(phases, dispatcher=dispatcher)
+        run_auto(phases, dispatcher=dispatcher, max_iterations=args.max_iterations)
         return
 
     # 默认：交互式
