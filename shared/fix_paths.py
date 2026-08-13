@@ -8,7 +8,7 @@ import glob
 
 PROJECT_ROOT = r'E:\CodeProject\ClaudeRoom\Data_Fusion_AutoResearch'
 
-# 需要处理的目录（跳过 legacy_tests, 年均融合方法历史迭代, LizhuoChen, 文档拆分, paper_output）
+# 需要处理的目录（跳过 legacy_tests, 年均融合方法历史迭代, fusion_scripts, 文档拆分, paper_output）
 TARGET_DIRS = [
     'agents',
     'test_result/基准方法',
@@ -27,7 +27,7 @@ TARGET_DIRS = [
 SKIP_DIRS = [
     'test_result/legacy_tests',
     'CodeWorkSpace/年均融合方法',
-    'LizhuoChen',
+    'fusion_scripts',
     '文档拆分',
     'paper_output',
     'PaperDownload',
