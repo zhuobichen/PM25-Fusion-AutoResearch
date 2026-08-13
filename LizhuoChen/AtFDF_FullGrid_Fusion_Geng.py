@@ -20,9 +20,9 @@ import sys
 import os
 
 # 路径配置
-MONITOR_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/Monitor_Data"
-MODEL_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/Model_Data/Geng_QH_20251031_AnnualMeanCMAQ"
-OUTPUT_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/AtFOutput_CV_Geng"
+MONITOR_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/Monitor_Data"
+MODEL_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/Model_Data/Geng_QH_20251031_AnnualMeanCMAQ"
+OUTPUT_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/AtFOutput_CV_Geng"
 
 # NNA和AdvancedRK路径
 sys.path.insert(0, 'E:/CodeProject/ClaudeRoom/Data_Fusion_AutoResearch/Code')
