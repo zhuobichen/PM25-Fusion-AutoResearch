@@ -15,12 +15,12 @@ import sys
 import os
 
 # 路径配置（与 AtFDF_CV_New_Geng.py 保持一致）
-MONITOR_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/Monitor_Data"
-MODEL_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/Model_Data/Geng_QH_20251031_AnnualMeanCMAQ"
-OUTPUT_DIR = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/AtFOutput_CV_Geng"
+MONITOR_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/Monitor_Data"
+MODEL_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/Model_Data/Geng_QH_20251031_AnnualMeanCMAQ"
+OUTPUT_DIR = "/data/workspace/DataFusion_China_CleanAir/Data/AtFOutput_CV_Geng"
 
 # 新增：十折划分表路径
-FOLD_FILE = "/DeepLearning/mnt/shixiansheng/DataFusion_China_CleanAir/Data/fold_split_table_daily.csv"
+FOLD_FILE = "/data/workspace/DataFusion_China_CleanAir/Data/fold_split_table_daily.csv"
 
 try:
     import pyrsig
