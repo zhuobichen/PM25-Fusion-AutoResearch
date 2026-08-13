@@ -56,7 +56,7 @@ E:\CodeProject\ClaudeRoom\Data_Fusion_AutoResearch\
 ├── error/                       # 错误日志
 ├── skills/                      # Claude Code Skills
 ├── 文档拆分/                    # 项目文档拆分
-└── LizhuoChen/                  # 用户个人代码（保留）
+└── fusion_scripts/                  # 用户个人代码（保留）
 ```
 
 ---
