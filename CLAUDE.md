@@ -151,6 +151,6 @@ from ReproductionMethods import BayesianDataAssimilation, GPDownscaling
 | Method | Stage1 R² | Stage2 R² | Stage3 R² | Notes |
 |--------|-----------|-----------|-----------|-------|
 | **PolyRK** | 0.9105 | 0.8474 | 0.9060 | Core innovation (OLS+GPR-RBF) |
-| **AdvancedRK** | 0.9162 | 0.8526 | 0.9129 | GPR-Matern kernel, best overall |
+| **AdvancedRK** | 0.9162 | 0.8526 | 0.9129 | GPR-Matern kernel, best in stage1 (4/4 verified) |
 
 **Excluded Methods**: PSK, CSPRK (no real innovation), MSRK/GARK/CGARK (no clear advantage)

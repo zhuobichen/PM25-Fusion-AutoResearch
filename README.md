@@ -103,6 +103,8 @@ python run_pipeline.py --auto --profile skip-download
 | **AdvancedRK** | 0.9162 | 0.8526 | 0.9129 | GPR-Matérn | ✅ Best |
 | **PolyRK** | 0.9105 | 0.8474 | 0.9060 | GPR-RBF | ✅ Core |
 
+> **阶段说明**：上表为四阶段多时段验证（pre_exp 1月1–5日 → stage1 1月 → stage2 7月 → stage3 12月）。其中 `0.9162` 是 **AdvancedRK 的 stage1（2020年1月）R²**，不是总体指标；全方法整体对比见 `test_result/comparison_report.md`（2026-04-05），总体最优为 **PolyEnsemble（R²=0.8523）**。
+
 ### Innovation Criteria
 
 **主级创新** — 三条件必须同时满足：
@@ -138,7 +140,7 @@ pre_exp → stage1 → stage2 → stage3
 | aVNA | `Code/VNAeVNAaVNA/` | 加法偏差校正 |
 | Downscaler | `Code/Downscaler/` | MCMC 降尺度 |
 
-### Reproduced Methods (25+)
+### Reproduced Methods (43 个代码文件)
 
 来自 `LocalPaperLibrary/` 中 12 篇论文的融合方法复现，存放在 `CodeWorkSpace/复现方法代码/`。
 
@@ -148,17 +150,17 @@ pre_exp → stage1 → stage2 → stage3
 | Model Aggregation | OMA, SMA, MMA | 0.30 ~ 0.49 |
 | Bias Correction | QuantileMapping, ODI | 0.08 ~ 0.09 |
 
-### Innovative Methods (30+)
+### Innovative Methods (99 个代码文件)
 
 已设计并实现的创新方法，存放在 `CodeWorkSpace/新融合方法代码/`。
 
 | Method | Status | R² Range | Innovation |
 |--------|:------:|:--------:|------------|
-| **AdvancedRK** | ✅ Verified | 0.85 ~ 0.92 | GPR-Matérn kernel, best overall |
+| **AdvancedRK** | ✅ Verified | 0.85 ~ 0.92 | GPR-Matérn kernel，stage1 最高（R²=0.9162） |
 | **PolyRK** | ✅ Verified | 0.85 ~ 0.91 | Polynomial OLS + GPR-RBF |
 | RobustRK | Partial | ~0.91 | Robust variant |
 | MSEF | Tested | ~0.81 | Multi-source ensemble |
-| Others | Various | — | 20+ methods in pipeline |
+| Others | Various | — | 90+ 代码文件在 pipeline 中 |
 
 ---
 
@@ -176,12 +178,12 @@ Data_Fusion_AutoResearch/
 │   └── Downscaler/                 #   MCMC 降尺度
 │
 ├── CodeWorkSpace/
-│   ├── 复现方法代码/                #   25+ 复现方法
-│   ├── 新融合方法代码/              #   30+ 创新方法
+│   ├── 复现方法代码/                #   43 个复现方法代码文件
+│   ├── 新融合方法代码/              #   99 个创新方法代码文件
 │   └── 年均融合方法/                #   年均数据融合
 │
-├── MethodToSmart/                  #   41 个方法文档（文献分析员输出）
-├── SmartToCode/                    #   55+ 个设计指令（方案设计师输出）
+├── MethodToSmart/                  #   62 个文件（60 个方法文档）
+├── SmartToCode/                    #   81 个文件（77 个设计指令）
 │
 ├── PaperDownload/                  #   ~500 篇论文 PDF（按 score 分类）
 ├── PaperDownloadMd/                #   论文清单与分析报告
